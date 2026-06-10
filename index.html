@@ -338,6 +338,16 @@
       border-color: #16a34a; border-left-color: #16a34a;
       background: #f0fdf4;
     }
+    /* ตรวจสอบก่อนผลิต — violet */
+    .flow-node-pre-check {
+      border-color: #7c3aed; border-left-color: #7c3aed;
+      background: #f5f3ff;
+    }
+    /* ตรวจสอบหลังผลิต — pink */
+    .flow-node-post-check {
+      border-color: #db2777; border-left-color: #db2777;
+      background: #fdf2f8;
+    }
 
     /* Type badge */
     .flow-node-type-badge {
@@ -349,8 +359,10 @@
     .badge-mixer    { background: #fef3c7; color: #92400e; }
     .badge-slump    { background: #ccfbf1; color: #115e59; }
     .badge-specimen { background: #dbeafe; color: #1e40af; }
-    .badge-test     { background: #dcfce7; color: #14532d; }
-    .badge-default  { background: #f1f5f9; color: #475569; }
+    .badge-test       { background: #dcfce7; color: #14532d; }
+    .badge-pre-check  { background: #ede9fe; color: #4c1d95; }
+    .badge-post-check { background: #fce7f3; color: #831843; }
+    .badge-default    { background: #f1f5f9; color: #475569; }
 
     /* ksc result value */
     .flow-node-ksc {
@@ -369,11 +381,13 @@
     }
     .flow-node-title:focus { border-bottom-color: #93c5fd; }
     .flow-node-del {
-      background: none; border: none; color: #cbd5e1;
-      font-size: 13px; cursor: pointer; padding: 0; margin-left: 6px;
+      background: #fee2e2; border: 1.5px solid #fca5a5; color: #dc2626;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      padding: 2px 7px; margin-left: 6px;
       flex-shrink: 0; line-height: 1;
+      border-radius: 6px; transition: background 0.15s, border-color 0.15s;
     }
-    .flow-node-del:hover { color: #ef4444; }
+    .flow-node-del:hover { background: #ef4444; border-color: #ef4444; color: white; }
 
     .flow-node-tag {
       font-size: 11px; color: #1a3a6b; background: #dbeafe;
@@ -394,13 +408,70 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-top: 2px;
     }
-    .flow-node-edit-btn {
-      background: white; color: #374151;
-      border: 1px solid #d1d5db; border-radius: 5px;
-      padding: 4px 10px; font-size: 11px; font-weight: 500;
-      cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    .flow-node-view-btn {
+      background: #f0fdf4; color: #15803d;
+      border: 1.5px solid #86efac; border-radius: 8px;
+      padding: 7px 12px; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+      flex: 1;
     }
-    .flow-node-edit-btn:hover { background: #f3f4f6; }
+    .flow-node-view-btn:hover { background: #dcfce7; }
+    .flow-node-edit-btn {
+      background: #1a3a6b; color: white;
+      border: none; border-radius: 8px;
+      padding: 7px 16px; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+      flex: 1; letter-spacing: 0.03em;
+      box-shadow: 0 2px 6px rgba(26,58,107,0.25);
+    }
+    .flow-node-edit-btn:hover { background: #1e4d8c; }
+    .flow-node-edit-btn:active { background: #0f2a52; transform: scale(0.97); }
+
+    /* ===== NODE PREVIEW POPUP ===== */
+    #nodePreviewOverlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 2000;
+      align-items: center; justify-content: center;
+    }
+    #nodePreviewOverlay.open { display: flex; }
+    #nodePreviewBox {
+      background: white; border-radius: 14px;
+      width: 92%; max-width: 480px; max-height: 85vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    #nodePreviewHead {
+      background: linear-gradient(135deg,#1a3a6b,#1e4d8c);
+      color: white; padding: 14px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #nodePreviewTitle { font-size: 16px; font-weight: 700; }
+    #nodePreviewClose {
+      background: rgba(255,255,255,0.15); border: none; color: white;
+      border-radius: 6px; width: 30px; height: 30px; font-size: 16px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    #nodePreviewBody { flex: 1; overflow-y: auto; padding: 16px 18px; }
+    #nodePreviewFoot {
+      padding: 12px 18px; border-top: 1px solid #e2e8f0;
+      display: flex; justify-content: flex-end;
+    }
+    #nodePreviewEditBtn {
+      background: #1a3a6b; color: white; border: none; border-radius: 8px;
+      padding: 9px 22px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    #nodePreviewEditBtn:hover { background: #1e4d8c; }
+    .preview-row { display: flex; gap: 4px; align-items: baseline; margin-bottom: 6px; flex-wrap: wrap; }
+    .preview-label { font-size: 11px; color: #94a3b8; }
+    .preview-val { font-size: 14px; font-weight: 700; color: #1e40af; }
+    .preview-unit { font-size: 11px; color: #6b7280; }
+    .preview-section { margin-bottom: 12px; }
+    .preview-section-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .preview-chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin: 2px; }
+    .chip-ok   { background: #dcfce7; color: #15803d; }
+    .chip-fail { background: #fee2e2; color: #dc2626; }
+    .chip-other{ background: #fef3c7; color: #b45309; }
 
     .flow-add-btn {
       position: absolute;
@@ -589,7 +660,8 @@
           <button type="button" data-title="โม่" data-type="mixer" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #d97706;background:#fffbeb;color:#92400e;font-size:12px;cursor:pointer;font-family:inherit;">🏭 โม่</button>
           <button type="button" data-title="Slump" data-type="slump" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #0d9488;background:#f0fdfa;color:#115e59;font-size:12px;cursor:pointer;font-family:inherit;">📏 Slump</button>
           <button type="button" data-title="ลูกปูน" data-type="specimen" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #3b82f6;background:#eff6ff;color:#1e40af;font-size:12px;cursor:pointer;font-family:inherit;">🧱 ลูกปูน</button>
-          <button type="button" data-title="ผลทดสอบ" data-type="test" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #16a34a;background:#f0fdf4;color:#14532d;font-size:12px;cursor:pointer;font-family:inherit;">✅ ผลทดสอบ</button>
+<button type="button" data-title="ตรวจสอบก่อนผลิต" data-type="pre-check" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:#f5f3ff;color:#4c1d95;font-size:12px;cursor:pointer;font-family:inherit;">🔍 ตรวจสอบก่อนผลิต</button>
+          <button type="button" data-title="ตรวจสอบหลังผลิต" data-type="post-check" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #db2777;background:#fdf2f8;color:#831843;font-size:12px;cursor:pointer;font-family:inherit;">✔️ ตรวจสอบหลังผลิต</button>
           <button type="button" data-title="custom" data-type="auto" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #d1d5db;background:white;color:#374151;font-size:12px;cursor:pointer;font-family:inherit;">✏️ เพิ่มเติม</button>
         </div>
         <!-- Number suffix input (for preset titles like โม่, Slump, etc.) -->
@@ -607,19 +679,16 @@
           onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
       </div>
       <div id="neTypePicker" style="display:none;"></div>
-      <div>
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">🕐 เวลา</label>
-        <input id="neTime" type="time"
-          style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;"
-          onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
-      </div>
-      <div>
+      <!-- Template fields (เปลี่ยนตาม title ที่เลือก) -->
+      <div id="neTemplateFields"></div>
+
+      <div id="neDetailGroup">
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">📄 รายละเอียด</label>
-        <textarea id="neDetail" placeholder="รายละเอียดเพิ่มเติม..." rows="4"
+        <textarea id="neDetail" placeholder="รายละเอียดเพิ่มเติม..." rows="3"
           style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"
           onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"></textarea>
       </div>
-      <div>
+      <div id="neMemoGroup">
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">📝 หมายเหตุ</label>
         <input id="neMemo" type="text" placeholder="หมายเหตุสั้นๆ..."
           style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;"
@@ -1006,7 +1075,9 @@
     if (/โม่|mixer/.test(t))               return 'mixer';
     if (/slump|สลัม/.test(t))              return 'slump';
     if (/ลูกปูน/.test(t))                  return 'specimen';
-    if (/เทส|test|ทดสอบ|ksc/.test(t))     return 'test';
+    if (/เทส|test|ทดสอบ|ksc/.test(t))          return 'test';
+    if (/ตรวจสอบก่อนผลิต|pre.?check/.test(t))  return 'pre-check';
+    if (/ตรวจสอบหลังผลิต|post.?check/.test(t)) return 'post-check';
     return 'default';
   }
 
@@ -1014,8 +1085,10 @@
     mixer:    { cls: 'flow-node-mixer',    badge: 'badge-mixer',    label: '🏭 โม่ผสม'    },
     slump:    { cls: 'flow-node-slump',    badge: 'badge-slump',    label: '📏 Slump'      },
     specimen: { cls: 'flow-node-specimen', badge: 'badge-specimen', label: '🧱 ลูกปูน'    },
-    test:     { cls: 'flow-node-test',     badge: 'badge-test',     label: '✅ ผลทดสอบ'   },
-    default:  { cls: '',                   badge: 'badge-default',  label: ''              },
+    test:       { cls: 'flow-node-test',       badge: 'badge-test',       label: '✅ ผลทดสอบ'          },
+    'pre-check':  { cls: 'flow-node-pre-check',  badge: 'badge-pre-check',  label: '🔍 ตรวจสอบก่อนผลิต' },
+    'post-check': { cls: 'flow-node-post-check', badge: 'badge-post-check', label: '✔️ ตรวจสอบหลังผลิต' },
+    default:    { cls: '',                     badge: 'badge-default',    label: ''                    },
   };
 
   /* Extract ksc value from detail/memo/title for test nodes */
@@ -1176,33 +1249,18 @@
       card.className = 'flow-node' + (isRoot ? ' flow-node-root' : (typeMeta.cls ? ' ' + typeMeta.cls : ''));
       card.style.left = x + 'px';
       card.style.top  = y + 'px';
+      card.onclick = () => openNodePreview(id);
 
-      const hasDetail = node.memo || node.time || node.detail || node.image || node.images?.length;
+      const hasData = node.templateValues || node.detail || node.memo || node.image || node.images?.length;
       card.innerHTML = `
         ${typeMeta.label ? `<div class="flow-node-type-badge ${typeMeta.badge}">${typeMeta.label}</div>` : ''}
         <div class="flow-node-header">
           <span class="flow-node-title">${escHtml(node.title)}</span>
           ${!isRoot ? `<button class="flow-node-del" title="ลบ" onclick="event.stopPropagation();deleteFlowNode('${id}')">✕</button>` : ''}
         </div>
-        ${node.time ? `<div class="flow-node-tag">🕐 ${escHtml(node.time)}</div>` : ''}
-        ${kscVal    ? `<div class="flow-node-ksc">${escHtml(kscVal)}</div>` : ''}
-        ${(() => {
-          const imgs = node.images?.length ? node.images : (node.image ? [node.image] : []);
-          if (!imgs.length) return '';
-          window._nodeImgs[id] = imgs;
-          const extra = imgs.length - 1;
-          const badge = extra > 0
-            ? `<div onclick="event.stopPropagation();openLightbox(window._nodeImgs['${id}'],1)" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.62);color:white;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(2px);">+${extra}</div>`
-            : '';
-          return `<div style="position:relative;margin:5px 0;">
-            <img src="${imgs[0]}" onclick="event.stopPropagation();openLightbox(window._nodeImgs['${id}'],0)" style="width:100%;border-radius:6px;object-fit:cover;max-height:80px;display:block;cursor:zoom-in;"/>
-            ${badge}
-          </div>`;
-        })()}
-        ${node.detail ? `<div class="flow-node-preview">${escHtml(node.detail.substring(0,55))}${node.detail.length>55?'…':''}</div>` : ''}
-        ${node.memo   ? `<div class="flow-node-preview" style="color:#94a3b8;font-size:11px;">${escHtml(node.memo)}</div>` : ''}
-        ${!hasDetail  ? `<div class="flow-node-hint">แตะเพื่อเพิ่มรายละเอียด</div>` : ''}
-        <div class="flow-node-footer">
+        ${!hasData ? `<div class="flow-node-hint">แตะเพื่อดูรายละเอียด</div>` : ''}
+        <div class="flow-node-footer" style="display:flex;gap:6px;">
+          ${hasData ? `<button class="flow-node-view-btn" onclick="event.stopPropagation();openNodePreview('${id}')">🔍 ดูข้อมูล</button>` : ''}
           <button class="flow-node-edit-btn" onclick="event.stopPropagation();openNodeEdit('${id}')">✏️ แก้ไข</button>
         </div>
       `;
@@ -1256,18 +1314,83 @@
 
   function deleteFlowNode(id) {
     const flow = flowData[currentFlowKey];
-    Object.values(flow.nodes).forEach(n => {
-      if (n.rightId === id) n.rightId = null;
-      if (n.downId  === id) n.downId  = null;
-    });
-    (function rm(nid) {
-      if (!nid || !flow.nodes[nid]) return;
-      const n = flow.nodes[nid];
-      rm(n.rightId); rm(n.downId);
-      delete flow.nodes[nid];
-    })(id);
-    saveFlowData();
-    renderFlow();
+    const node = flow.nodes[id];
+    if (!node) return;
+    showConfirm(
+      `ลบ "${node.title}" ?`,
+      'หัวข้อย่อยทั้งหมดจะถูกลบด้วย',
+      () => {
+        Object.values(flow.nodes).forEach(n => {
+          if (n.rightId === id) n.rightId = null;
+          if (n.downId  === id) n.downId  = null;
+        });
+        (function rm(nid) {
+          if (!nid || !flow.nodes[nid]) return;
+          const n = flow.nodes[nid];
+          rm(n.rightId); rm(n.downId);
+          delete flow.nodes[nid];
+        })(id);
+        saveFlowData();
+        renderFlow();
+      }
+    );
+  }
+
+  /* ===== CONFIRM DIALOG ===== */
+  function showConfirm(title, subtitle, onConfirm) {
+    // Remove any existing confirm
+    const old = document.getElementById('confirmDialog');
+    if (old) old.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirmDialog';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.45);
+      display:flex;align-items:center;justify-content:center;
+      z-index:1400;animation:fadeIn 0.15s ease;
+    `;
+    overlay.innerHTML = `
+      <div style="
+        background:white;border-radius:14px;width:340px;max-width:90vw;
+        box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;
+        animation:popIn 0.15s ease;">
+        <div style="background:#fee2e2;padding:16px 20px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:22px;">🗑️</span>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#991b1b;">${escHtml(title)}</div>
+            <div style="font-size:12px;color:#b91c1c;margin-top:2px;">${escHtml(subtitle)}</div>
+          </div>
+        </div>
+        <div style="padding:16px 20px;display:flex;gap:8px;justify-content:flex-end;">
+          <button id="confirmCancel" style="
+            background:white;border:1px solid #d1d5db;border-radius:8px;
+            padding:8px 18px;font-size:14px;cursor:pointer;color:#374151;font-family:inherit;">
+            ยกเลิก
+          </button>
+          <button id="confirmOk" style="
+            background:#ef4444;color:white;border:none;border-radius:8px;
+            padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+            transition:background 0.15s;">
+            🗑️ ลบเลย
+          </button>
+        </div>
+      </div>
+      <style>
+        @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+        @keyframes popIn  { from { transform:scale(0.9) } to { transform:scale(1) } }
+      </style>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('confirmCancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('confirmOk').onclick = () => {
+      overlay.remove();
+      onConfirm();
+    };
+    document.getElementById('confirmOk').onmouseenter = function() { this.style.background = '#dc2626'; };
+    document.getElementById('confirmOk').onmouseleave = function() { this.style.background = '#ef4444'; };
   }
 
   function updateFlowTitle(id, el) {
@@ -1339,6 +1462,291 @@
     btn.style.fontWeight = '700';
   }
 
+  /* ===== TITLE TEMPLATES ===== */
+  // rows: array of rows; each row = array of field objects
+  // field: { id, label, type, placeholder, unit, flex, readOnly, compute }
+  const TITLE_TEMPLATES = {
+    'โม่': {
+      showMemo: true,
+      rows: [
+        [
+          { id: 'tpl_mo_cement', label: '🪨 ปูน',   type: 'number', placeholder: '0', unit: 'กก.', flex: 1 },
+          { id: 'tpl_mo_stone',  label: '🪨 หิน',   type: 'number', placeholder: '0', unit: 'กก.', flex: 1 },
+          { id: 'tpl_mo_sand',   label: '🏖️ ทราย', type: 'number', placeholder: '0', unit: 'กก.', flex: 1 },
+        ],
+        [
+          { id: 'tpl_mo_water',  label: '💧 น้ำ',   type: 'number', placeholder: '0', unit: 'ล.', flex: 1 },
+          { id: 'tpl_mo_chem',   label: '🧪 น้ำยา', type: 'number', placeholder: '0', unit: 'ล.', flex: 1 },
+        ],
+      ],
+    },
+    'Slump': {
+      showMemo: false,
+      rows: [
+        [{ id: 'tpl_slump', label: '📏 ค่า Slump', type: 'number', placeholder: '0', unit: 'cm' }],
+      ],
+    },
+    'ลูกปูน': {
+      showMemo: false,
+      rows: [
+        [
+          { id: 'tpl_collect_date', label: '📅 วันที่เก็บ', type: 'date', placeholder: '', unit: '', flex: 2, lockMonth: true, defaultToday: true },
+          { id: 'tpl_collect_time', label: '🕐 เวลาเก็บ',  type: 'time', placeholder: '', unit: '', flex: 1 },
+        ],
+        [
+          { id: 'tpl_test_date',    label: '🧪 วันที่เทส',  type: 'date', placeholder: '', unit: '', flex: 2, lockMonth: true, defaultToday: true },
+          { id: 'tpl_test_time',    label: '🕐 เวลาเทส',   type: 'time', placeholder: '', unit: '', flex: 1 },
+        ],
+        [
+          { id: 'tpl_age', label: '📆 อายุ', type: 'number', placeholder: 'คำนวณอัตโนมัติ', unit: 'วัน', flex: 1,
+            compute: (vals) => {
+              const d1 = vals['tpl_collect_date'], d2 = vals['tpl_test_date'];
+              if (!d1 || !d2) return '';
+              const diff = Math.round((new Date(d2) - new Date(d1)) / 86400000);
+              return diff >= 0 ? String(diff) : '';
+            }
+          },
+        ],
+        [
+          { id: 'tpl_newton', label: '⚖️ นิวตัน', type: 'number', placeholder: '0', unit: 'N', flex: 1 },
+          { id: 'tpl_ksc',    label: '💪 ksc',    type: 'number', placeholder: 'คำนวณอัตโนมัติ', unit: 'ksc', flex: 1, readOnly: true,
+            compute: (vals) => {
+              const n = parseFloat(vals['tpl_newton']);
+              if (!n || isNaN(n)) return '';
+              return ((n * 0.9853 + 11.881) * 101.97 / 225).toFixed(2);
+            }
+          },
+        ],
+      ],
+    },
+    'ตรวจสอบก่อนผลิต': {
+      showMemo: false, rows: [],
+      customRender: (container, sv) => {
+        // รวม PS (แผ่นพื้น) + PI (เสาเข็ม) — ที่ซ้ำกันเป็นข้อเดียว
+        const ITEMS = [
+          { id:'m1',  label:'การทำความสะอาดบนแพผลิตก่อนวิ่งลวด' },
+          { id:'m2',  label:'การทำน้ำมันท้องแบบแผนพื้น' },
+          { id:'m3',  label:'การเก็บเศษปูนใต้แพเพื่อเป็นการประกอบแพ' },
+          { id:'m4',  label:'การทำน้ำมันท้องแบบเสาไอ' },
+          { id:'m5',  label:'ลวด PCY ร้อยได้ถูกต้องตามรายการสั่งผลิต' },
+          { id:'m6',  label:'ขนาด และ จำนวน ลวด PCY  4@3', extra:{ id:'m6v', placeholder:'...' } },
+          { id:'m7',  label:'ขนาด และ จำนวน ลวด PCY  4@4', extra:{ id:'m7v', placeholder:'...' } },
+          { id:'m8',  label:'ขนาด และ จำนวน ลวด PCY  4@5', extra:{ id:'m8v', placeholder:'...' } },
+          { id:'m9',  label:'หัวเชื่อมวางตรงตามความยาวที่กำหนด' },
+          { id:'m10', label:'ระยะยึดดึงลวดหัวแท่นมีความยาว', extra:{ id:'m10v', placeholder:'0', unit:'ชม.' } },
+          { id:'m11', label:'กับจับลวดอยู่ในสภาพพร้อมใช้งานหรือไม่' },
+          { id:'m12', label:'ระยะความยาวของแผ่นตรงตามเอกสารสั่งผลิต' },
+          { id:'m13', label:'ระยะความยาวของเสาตรงตามเอกสารสั่งผลิต' },
+          { id:'m14', label:'การตอกลิ่มล็อคครบตามจำนวน' },
+          { id:'m15', label:'การผูกลวดกับลูกตั้งตรงตามที่กำหนด', extra:{ id:'m15v', placeholder:'0', unit:'จุด' } },
+          { id:'m16', label:'ลูกตั้งมีจำนวนตรงตามความยาวที่กำหนด' },
+          { id:'m17', label:'การเข้าแบบครบและประกบรอยต่อสนิทหรือไม่' },
+          { id:'m18', label:'การทำความสะอาดบักเก็ตปูน' },
+          { id:'m19', label:'แรงดึงเครื่องดึงลวด', extra:{ id:'m19v', placeholder:'0', unit:'PSI' } },
+          { id:'m20', label:'ทดสอบเครื่องมือที่ใช้งานก่อนการผลิต' },
+          { id:'m21', label:'ตรวจสอบสภาพแพผลิตแผ่นพื้นว่ามีสนิมหรือไม่' },
+          { id:'m22', label:'มีการตรวจเช็กหัวเชื่อมได้ระดับและตรงตามระยะความยาวของเสา' },
+        ];
+        const base = 'font-family:inherit;font-size:13px;';
+        const inputSm = `${base}padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;outline:none;width:100%;box-sizing:border-box;`;
+        container.innerHTML = `
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <div style="flex:2;min-width:110px;">
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">PCY</label>
+              <input id="tm_pcy" type="text" placeholder="เลข PCY" value="${escHtml(sv?.tm_pcy||'')}"
+                style="${inputSm}font-weight:700;font-size:14px;border-color:#7c3aed;background:#f5f3ff;color:#4c1d95;"
+                onfocus="this.style.borderColor='#4c1d95'" onblur="this.style.borderColor='#7c3aed'"/>
+            </div>
+            <div style="flex:1;min-width:80px;">
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">หัวเชื่อม</label>
+              <input id="tm_weld" type="text" placeholder="..." value="${escHtml(sv?.tm_weld||'')}"
+                style="${inputSm}" onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+            </div>
+            <div style="flex:1;min-width:80px;">
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">หัวเดี่ยว</label>
+              <input id="tm_single" type="text" placeholder="..." value="${escHtml(sv?.tm_single||'')}"
+                style="${inputSm}" onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+            </div>
+            <div style="flex:1;min-width:80px;">
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">📏 Slump</label>
+              <input id="tm_slump" type="number" placeholder="0" value="${escHtml(sv?.tm_slump||'')}"
+                style="${inputSm}font-weight:700;border-color:#0d9488;background:#f0fdfa;color:#115e59;"
+                onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#0d9488'"/>
+            </div>
+            <div style="flex:1;min-width:80px;">
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">🕐 เริ่มเท</label>
+              <input id="tm_t_start" type="time" value="${escHtml(sv?.tm_t_start||'')}"
+                style="${inputSm}" onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+            </div>
+            <div style="flex:1;min-width:80px;">
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">🕐 เทเสร็จ</label>
+              <input id="tm_t_end" type="time" value="${escHtml(sv?.tm_t_end||'')}"
+                style="${inputSm}" onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:12px;">
+            <div style="display:grid;grid-template-columns:28px 1fr 48px 48px 48px;background:#1a3a6b;color:white;font-weight:700;font-size:11px;text-align:center;">
+              <div style="padding:6px 4px;">ที่</div>
+              <div style="padding:6px 8px;text-align:left;">รายการ</div>
+              <div style="padding:6px 2px;">✅<br/>ใช้ได้</div>
+              <div style="padding:6px 2px;">❌<br/>ไม่ได้</div>
+              <div style="padding:6px 2px;">➖<br/>อื่นๆ</div>
+            </div>
+            <div id="tm_rows"></div>
+          </div>`;
+        const rows = container.querySelector('#tm_rows');
+        ITEMS.forEach((item, i) => {
+          const val = sv?.[item.id] || '';
+          const extraVal = item.extra ? escHtml(sv?.[item.extra.id]||'') : '';
+          const row = document.createElement('div');
+          row.style.cssText = `display:grid;grid-template-columns:28px 1fr 48px 48px 48px;background:${i%2===0?'white':'#f8fafc'};border-top:1px solid #e2e8f0;align-items:center;`;
+          row.innerHTML = `
+            <div style="padding:5px 4px;text-align:center;font-weight:600;color:#64748b;font-size:11px;">${i+1}</div>
+            <div style="padding:5px 8px;color:#1e293b;line-height:1.4;font-size:12px;">
+              ${item.label}
+              ${item.extra ? `<span style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;">
+                <input id="${item.extra.id}" type="text" placeholder="${item.extra.placeholder||''}" value="${extraVal}"
+                  style="width:60px;padding:2px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;font-family:inherit;outline:none;"
+                  onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+                ${item.extra.unit?`<span style="font-size:10px;color:#6b7280;">${item.extra.unit}</span>`:''}
+              </span>` : ''}
+            </div>
+            <div style="text-align:center;"><input type="radio" name="mchk_${item.id}" value="ok"    ${val==='ok'   ?'checked':''} style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;"/></div>
+            <div style="text-align:center;"><input type="radio" name="mchk_${item.id}" value="fail"  ${val==='fail' ?'checked':''} style="width:15px;height:15px;accent-color:#ef4444;cursor:pointer;"/></div>
+            <div style="text-align:center;"><input type="radio" name="mchk_${item.id}" value="other" ${val==='other'?'checked':''} style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer;"/></div>
+          `;
+          rows.appendChild(row);
+        });
+      },
+      getValues: () => {
+        const hdrIds = ['tm_pcy','tm_weld','tm_single','tm_slump','tm_t_start','tm_t_end',
+          'm6v','m7v','m8v','m10v','m15v','m19v'];
+        const chkIds = ['m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12',
+          'm13','m14','m15','m16','m17','m18','m19','m20','m21','m22'];
+        const vals = {};
+        hdrIds.forEach(id => { const el=document.getElementById(id); if(el) vals[id]=el.value.trim(); });
+        chkIds.forEach(id => { const el=document.querySelector(`input[name="mchk_${id}"]:checked`); vals[id]=el?el.value:''; });
+        return vals;
+      },
+    },
+    'ตรวจสอบหลังผลิต': {
+      showMemo: false,
+      showDetail: false,
+      rows: [
+        [
+          { id: 'tpl_post_date',   label: '📅 วันที่',       type: 'date',   placeholder: '', unit: '', flex: 2, lockMonth: true, defaultToday: true },
+        ],
+        [
+          { id: 'tpl_post_total',  label: '🏭 จำนวนผลิต',   type: 'number', placeholder: '0', unit: 'ชิ้น', flex: 1 },
+          { id: 'tpl_post_accept', label: '✅ รับเข้า',      type: 'number', placeholder: '0', unit: 'ชิ้น', flex: 1 },
+          { id: 'tpl_post_waste',  label: '❌ เสีย',         type: 'number', placeholder: '0', unit: 'ชิ้น', flex: 1 },
+        ],
+      ],
+    },
+    // เพิ่ม template อื่นๆ ต่อท้ายได้ที่นี่
+  };
+
+  function renderTemplateFields(title, savedValues) {
+    const container = document.getElementById('neTemplateFields');
+    container.innerHTML = '';
+    const tpl = TITLE_TEMPLATES[title];
+    if (!tpl) return;
+    // Custom render path
+    if (tpl.customRender) { tpl.customRender(container, savedValues || {}); return; }
+    if (!tpl.rows?.length) return;
+
+    // Context date from selectedDateKey e.g. "2025-06-09"
+    const ctxDate = selectedDateKey || '';
+    const [ctxY, ctxM] = ctxDate.split('-');
+    const monthMin = ctxY && ctxM ? `${ctxY}-${ctxM}-01` : '';
+    const monthMax = ctxY && ctxM ? `${ctxY}-${ctxM}-${new Date(+ctxY, +ctxM, 0).getDate()}` : '';
+
+    const inputStyle = 'width:100%;padding:8px 10px;border:1.5px solid #3b82f6;border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;outline:none;color:#1e3a8a;background:#eff6ff;box-sizing:border-box;';
+
+    tpl.rows.forEach(row => {
+      const rowDiv = document.createElement('div');
+      rowDiv.style.cssText = 'display:flex;gap:8px;';
+
+      row.forEach(f => {
+        const cell = document.createElement('div');
+        cell.style.cssText = `display:flex;flex-direction:column;gap:3px;flex:${f.flex||1};min-width:0;`;
+
+        // Determine value: saved → compute → defaultToday
+        let val = savedValues?.[f.id] ?? '';
+        if (f.compute && !val) val = f.compute(savedValues || {});
+        if (!val && f.defaultToday && ctxDate) val = ctxDate;
+
+        // Extra attrs for date fields with lockMonth
+        let extraAttrs = '';
+        if (f.type === 'date' && f.lockMonth && monthMin) {
+          extraAttrs = `min="${monthMin}" max="${monthMax}"`;
+        }
+
+        const unitHtml = f.unit ? `<span style="font-size:12px;color:#6b7280;margin-left:5px;white-space:nowrap;">${f.unit}</span>` : '';
+        const roStyle = f.readOnly ? 'background:#f1f5f9;color:#64748b;border-color:#cbd5e1;cursor:default;' : '';
+        cell.innerHTML = `
+          <label style="font-size:11px;font-weight:600;color:#374151;">${f.label}</label>
+          <div style="display:flex;align-items:center;">
+            <input id="${f.id}" type="${f.type}" placeholder="${f.placeholder||''}"
+              value="${escHtml(String(val))}"
+              ${extraAttrs}
+              ${f.readOnly ? 'readonly' : ''}
+              style="${inputStyle}${roStyle}"
+              onfocus="${f.readOnly ? '' : "this.style.borderColor='#1a3a6b'"}" onblur="${f.readOnly ? '' : "this.style.borderColor='#3b82f6'"}"
+              oninput="onTemplateInput('${title}')"/>
+            ${unitHtml}
+          </div>
+        `;
+        rowDiv.appendChild(cell);
+      });
+
+      container.appendChild(rowDiv);
+    });
+  }
+
+  function onTemplateInput(title) {
+    const tpl = TITLE_TEMPLATES[title];
+    if (!tpl) return;
+    const vals = getTemplateFieldValues(title);
+    // Re-compute computed fields
+    tpl.rows.flat().forEach(f => {
+      if (!f.compute) return;
+      const el = document.getElementById(f.id);
+      if (!el) return;
+      const computed = f.compute(vals);
+      if (computed !== '') el.value = computed;
+    });
+  }
+
+  function getTemplateFieldValues(title) {
+    const tpl = TITLE_TEMPLATES[title];
+    if (!tpl) return {};
+    if (tpl.getValues) return tpl.getValues();
+    if (!tpl.rows?.length) return {};
+    const vals = {};
+    tpl.rows.flat().forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el) vals[f.id] = el.value.trim();
+    });
+    return vals;
+  }
+
+  function applyTitleTemplate(title, savedValues) {
+    const tpl = TITLE_TEMPLATES[title];
+    const memoGroup   = document.getElementById('neMemoGroup');
+    const detailGroup = document.getElementById('neDetailGroup');
+
+    if (tpl) {
+      if (memoGroup)   memoGroup.style.display   = tpl.showMemo   ? '' : 'none';
+      if (detailGroup) detailGroup.style.display = tpl.showDetail === false ? 'none' : '';
+      renderTemplateFields(title, savedValues || {});
+    } else {
+      if (memoGroup)   memoGroup.style.display   = '';
+      if (detailGroup) detailGroup.style.display = '';
+      renderTemplateFields(null, {});
+    }
+  }
+
   function pickNodeTitle(btn) {
     document.querySelectorAll('#neTitlePicker button').forEach(b => {
       b.style.outline = 'none';
@@ -1363,6 +1771,8 @@
       updateTitlePreview();
       numInput.focus();
     }
+
+    applyTitleTemplate(btn.dataset.title, {});
   }
 
   function updateTitlePreview() {
@@ -1382,7 +1792,7 @@
     if (node.image && !node.images) node.images = [node.image];
     pendingImages = [...(node.images || [])];
 
-    document.getElementById('neTime').value   = node.time   || '';
+    // neTime field removed
     document.getElementById('neMemo').value   = node.memo   || '';
     document.getElementById('neDetail').value = node.detail || '';
     document.getElementById('neImageInput').value = '';
@@ -1424,6 +1834,9 @@
       b.style.outline = 'none'; b.style.fontWeight = 'normal';
       if (b.dataset.type === savedType) { b.style.outline = '2px solid #1a3a6b'; b.style.fontWeight = '700'; }
     });
+
+    // Apply template with saved field values
+    applyTitleTemplate(selectedNodeTitle, node.templateValues || {});
 
     renderImageGrid();
 
@@ -1487,11 +1900,12 @@
     } else {
       node.title = document.getElementById('neTitle').value.trim() || '(ไม่มีชื่อ)';
     }
-    node.time     = document.getElementById('neTime').value;
-    node.memo     = document.getElementById('neMemo').value.trim();
-    node.detail   = document.getElementById('neDetail').value.trim();
-    node.images   = [...pendingImages];
-    node.image    = ''; // clear legacy
+    // node.time field removed from modal
+    node.memo           = document.getElementById('neMemo').value.trim();
+    node.detail         = document.getElementById('neDetail').value.trim();
+    node.images         = [...pendingImages];
+    node.image          = ''; // clear legacy
+    node.templateValues = getTemplateFieldValues(selectedNodeTitle);
     // Save manually picked type
     const activeType = document.querySelector('#neTypePicker button[style*="outline: 2px"]');
     node.nodeType = activeType ? activeType.dataset.type : 'auto';
@@ -1549,7 +1963,172 @@
   currentYear  = now.getFullYear();
   currentMonth = now.getMonth();
   renderCalendar();
+
+  /* ===== NODE PREVIEW POPUP ===== */
+  (function() {
+    // Create overlay DOM
+    const overlay = document.createElement('div');
+    overlay.id = 'nodePreviewOverlay';
+    overlay.innerHTML = `
+      <div id="nodePreviewBox">
+        <div id="nodePreviewHead">
+          <span id="nodePreviewTitle"></span>
+          <button id="nodePreviewClose">✕</button>
+        </div>
+        <div id="nodePreviewBody"></div>
+        <div id="nodePreviewFoot">
+          <button id="nodePreviewEditBtn">✏️ แก้ไข</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    let _previewNodeId = null;
+
+    document.getElementById('nodePreviewClose').onclick = () => overlay.classList.remove('open');
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+    document.getElementById('nodePreviewEditBtn').onclick = () => {
+      overlay.classList.remove('open');
+      if (_previewNodeId) openNodeEdit(_previewNodeId);
+    };
+
+    window.openNodePreview = function(id) {
+      const flow = flowData[currentFlowKey];
+      if (!flow) return;
+      const node = flow.nodes[id];
+      if (!node) return;
+      _previewNodeId = id;
+
+      document.getElementById('nodePreviewTitle').textContent = node.title || '(ไม่มีชื่อ)';
+      const body = document.getElementById('nodePreviewBody');
+      body.innerHTML = '';
+
+      const baseTitle = node.title?.replace(/\d+$/, '');
+      const tpl = TITLE_TEMPLATES[baseTitle] || TITLE_TEMPLATES[node.title];
+      const tv = node.templateValues || {};
+
+      // --- Render template values ---
+      if (tpl && tpl.customRender) {
+        // ตรวจสอบก่อนผลิต: show checklist in read-only table
+        const ITEMS = [
+          { id:'m1',  label:'การทำความสะอาดบนแพผลิตก่อนวิ่งลวด' },
+          { id:'m2',  label:'การทำน้ำมันท้องแบบแผนพื้น' },
+          { id:'m3',  label:'การเก็บเศษปูนใต้แพเพื่อเป็นการประกอบแพ' },
+          { id:'m4',  label:'การทำน้ำมันท้องแบบเสาไอ' },
+          { id:'m5',  label:'ลวด PCY ร้อยได้ถูกต้องตามรายการสั่งผลิต' },
+          { id:'m6',  label:'ขนาด และ จำนวน ลวด PCY  4@3', extraId:'m6v' },
+          { id:'m7',  label:'ขนาด และ จำนวน ลวด PCY  4@4', extraId:'m7v' },
+          { id:'m8',  label:'ขนาด และ จำนวน ลวด PCY  4@5', extraId:'m8v' },
+          { id:'m9',  label:'หัวเชื่อมวางตรงตามความยาวที่กำหนด' },
+          { id:'m10', label:'ระยะยึดดึงลวดหัวแท่นมีความยาว', extraId:'m10v', unit:'ชม.' },
+          { id:'m11', label:'กับจับลวดอยู่ในสภาพพร้อมใช้งานหรือไม่' },
+          { id:'m12', label:'ระยะความยาวของแผ่นตรงตามเอกสารสั่งผลิต' },
+          { id:'m13', label:'ระยะความยาวของเสาตรงตามเอกสารสั่งผลิต' },
+          { id:'m14', label:'การตอกลิ่มล็อคครบตามจำนวน' },
+          { id:'m15', label:'การผูกลวดกับลูกตั้งตรงตามที่กำหนด', extraId:'m15v', unit:'จุด' },
+          { id:'m16', label:'ลูกตั้งมีจำนวนตรงตามความยาวที่กำหนด' },
+          { id:'m17', label:'การเข้าแบบครบและประกบรอยต่อสนิทหรือไม่' },
+          { id:'m18', label:'การทำความสะอาดบักเก็ตปูน' },
+          { id:'m19', label:'แรงดึงเครื่องดึงลวด', extraId:'m19v', unit:'PSI' },
+          { id:'m20', label:'ทดสอบเครื่องมือที่ใช้งานก่อนการผลิต' },
+          { id:'m21', label:'ตรวจสอบสภาพแพผลิตแผ่นพื้นว่ามีสนิมหรือไม่' },
+          { id:'m22', label:'มีการตรวจเช็กหัวเชื่อมได้ระดับและตรงตามระยะความยาวของเสา' },
+        ];
+        const hdrFields = [
+          { id:'tm_pcy', label:'PCY' }, { id:'tm_weld', label:'หัวเชื่อม' },
+          { id:'tm_single', label:'หัวเดี่ยว' }, { id:'tm_slump', label:'Slump' },
+          { id:'tm_t_start', label:'เริ่มเท' }, { id:'tm_t_end', label:'เทเสร็จ' },
+        ];
+        // Header fields row
+        const hdrDiv = document.createElement('div');
+        hdrDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;';
+        hdrFields.forEach(f => {
+          const v = tv[f.id];
+          if (!v) return;
+          hdrDiv.innerHTML += `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:5px 10px;">
+            <div style="font-size:10px;color:#64748b;">${f.label}</div>
+            <div style="font-size:14px;font-weight:700;color:#0369a1;">${escHtml(v)}</div>
+          </div>`;
+        });
+        if (hdrDiv.innerHTML) body.appendChild(hdrDiv);
+
+        // Checklist table
+        const table = document.createElement('div');
+        table.style.cssText = 'border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:12px;';
+        const head = document.createElement('div');
+        head.style.cssText = 'display:grid;grid-template-columns:28px 1fr 48px 48px 48px;background:#1a3a6b;color:white;font-weight:700;font-size:11px;text-align:center;';
+        head.innerHTML = '<div style="padding:5px 4px;">ที่</div><div style="padding:5px 8px;text-align:left;">รายการ</div><div style="padding:5px 2px;">✅<br/>ใช้ได้</div><div style="padding:5px 2px;">❌<br/>ไม่ได้</div><div style="padding:5px 2px;">➖<br/>อื่นๆ</div>';
+        table.appendChild(head);
+        ITEMS.forEach((item, i) => {
+          const val = tv[item.id] || '';
+          const extraVal = item.extraId ? (tv[item.extraId]||'') : '';
+          const row = document.createElement('div');
+          row.style.cssText = `display:grid;grid-template-columns:28px 1fr 48px 48px 48px;background:${i%2===0?'white':'#f8fafc'};border-top:1px solid #e2e8f0;align-items:center;`;
+          const okColor = val==='ok' ? '#16a34a' : '#d1d5db';
+          const failColor = val==='fail' ? '#ef4444' : '#d1d5db';
+          const otherColor = val==='other' ? '#f59e0b' : '#d1d5db';
+          row.innerHTML = `
+            <div style="padding:5px 4px;text-align:center;font-weight:600;color:#64748b;font-size:11px;">${i+1}</div>
+            <div style="padding:5px 8px;color:#1e293b;line-height:1.4;font-size:12px;">
+              ${escHtml(item.label)}
+              ${extraVal ? `<span style="font-size:11px;color:#1a3a6b;font-weight:700;margin-left:4px;">${escHtml(extraVal)}${item.unit?' '+item.unit:''}</span>` : ''}
+            </div>
+            <div style="text-align:center;font-size:16px;color:${okColor};">${val==='ok'?'✅':'○'}</div>
+            <div style="text-align:center;font-size:16px;color:${failColor};">${val==='fail'?'❌':'○'}</div>
+            <div style="text-align:center;font-size:16px;color:${otherColor};">${val==='other'?'➖':'○'}</div>`;
+          table.appendChild(row);
+        });
+        body.appendChild(table);
+
+      } else if (tpl && tpl.rows?.length) {
+        // Standard rows template
+        const sec = document.createElement('div');
+        sec.className = 'preview-section';
+        tpl.rows.flat().forEach(f => {
+          const v = tv[f.id];
+          if (!v) return;
+          sec.innerHTML += `<div class="preview-row">
+            <span class="preview-label">${f.label}</span>
+            <span class="preview-val">${escHtml(v)}</span>
+            ${f.unit ? `<span class="preview-unit">${f.unit}</span>` : ''}
+          </div>`;
+        });
+        if (sec.innerHTML) body.appendChild(sec);
+      }
+
+      // Detail
+      if (node.detail) {
+        const d = document.createElement('div');
+        d.className = 'preview-section';
+        d.innerHTML = `<div class="preview-section-title">รายละเอียด</div><div style="font-size:13px;color:#1e293b;white-space:pre-wrap;">${escHtml(node.detail)}</div>`;
+        body.appendChild(d);
+      }
+      // Memo
+      if (node.memo) {
+        const d = document.createElement('div');
+        d.className = 'preview-section';
+        d.innerHTML = `<div class="preview-section-title">หมายเหตุ</div><div style="font-size:13px;color:#64748b;">${escHtml(node.memo)}</div>`;
+        body.appendChild(d);
+      }
+      // Images
+      const imgs = node.images?.length ? node.images : (node.image ? [node.image] : []);
+      if (imgs.length) {
+        const d = document.createElement('div');
+        d.className = 'preview-section';
+        d.innerHTML = `<div class="preview-section-title">รูปภาพ</div>`;
+        imgs.forEach(src => {
+          d.innerHTML += `<img src="${src}" style="width:100%;border-radius:8px;margin-top:4px;max-height:200px;object-fit:cover;cursor:zoom-in;" onclick="openLightbox([this.src],0)"/>`;
+        });
+        body.appendChild(d);
+      }
+      // Empty state
+      if (!body.children.length) {
+        body.innerHTML = '<div style="color:#94a3b8;font-style:italic;text-align:center;padding:24px 0;">ยังไม่มีรายละเอียด</div>';
+      }
+
+      overlay.classList.add('open');
+    };
+  })();
+
 </script>
-<script type="module" src="firebase-sync.js"></script>
 </body>
 </html>
