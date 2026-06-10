@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ปฏิทินจดโน้ต - สินอุดมพานิช</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', 'Tahoma', sans-serif; background: #f0f2f5; min-height: 100vh; }
+    .navbar { background: linear-gradient(135deg, #1a3a6b 0%, #1e4d8c 100%); color: white; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 64px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .navbar-brand { display: flex; align-items: center; gap: 12px; }
+    .navbar-icon { width: 38px; height: 38px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .navbar-title { font-size: 16px; font-weight: 700; }
+    .navbar-subtitle { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+    .navbar-actions { display: flex; align-items: center; gap: 10px; }
+    .btn-admin { background: #f5a623; color: white; border: none; border-radius: 6px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-logout { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 7px 16px; font-size: 13px; cursor: pointer; }
+    .layout { display: flex; height: calc(100vh - 64px); }
+    .sidebar { width: 220px; background: #1a3a6b; padding: 16px 0; flex-shrink: 0; }
+    .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 11px 20px; color: rgba(255,255,255,0.75); font-size: 14px; cursor: pointer; border-left: 3px solid transparent; }
+    .sidebar-item.active { background: rgba(255,255,255,0.15); color: white; border-left-color: #f5a623; }
+    .sidebar-icon { font-size: 16px; width: 20px; text-align: center; }
+    .main { flex: 1; padding: 24px; overflow-y: auto; }
+    .calendar-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .month-nav { display: flex; align-items: center; gap: 12px; }
+    .btn-nav { background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 7px 16px; font-size: 13px; cursor: pointer; color: #374151; }
+    .month-label { font-size: 18px; font-weight: 700; color: #1a3a6b; min-width: 180px; text-align: center; }
+    .btn-today { background: #1a3a6b; color: white; border: none; border-radius: 6px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .calendar { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; }
+    .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); background: #1a3a6b; }
+    .calendar-header-cell { padding: 12px 0; text-align: center; font-size: 13px; font-weight: 600; color: white; }
+    .calendar-header-cell:first-child { color: #ffb3b3; }
+    .calendar-header-cell:last-child { color: #a5d8ff; }
+    .calendar-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .calendar-cell { min-height: 110px; padding: 8px; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; cursor: pointer; position: relative; }
+    .calendar-cell:nth-child(7n) { border-right: none; }
+    .calendar-cell:hover { background: #f0f7ff; }
+    .calendar-cell.other-month { background: #fafafa; }
+    .calendar-cell.other-month .cell-day { color: #c0c0c0; }
+    .calendar-cell.today { background: #eff6ff; }
+    .cell-day { font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 6px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; }
+    .cell-day.today-badge { background: #1a3a6b; color: white; }
+    .calendar-cell:nth-child(7n+1) .cell-day { color: #e53e3e; }
+    .note-item { display: flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 4px; font-size: 11.5px; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
+    .note-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .note-text { overflow: hidden; text-overflow: ellipsis; }
+    .note-more { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: white; border-radius: 14px; width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.2s; overflow: hidden; }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { background: linear-gradient(135deg, #1a3a6b, #1e4d8c); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .modal-date { font-size: 16px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; }
+    .modal-body { padding: 20px; }
+    .notes-list { margin-bottom: 16px; }
+    .note-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #f9fafb; margin-bottom: 8px; border: 1px solid #e5e7eb; }
+    .note-row-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .note-row-text { flex: 1; font-size: 14px; color: #374151; }
+    .note-row-delete { background: none; border: none; color: #9ca3af; font-size: 16px; cursor: pointer; padding: 0 4px; }
+    .add-note-section { border-top: 1px solid #e5e7eb; padding-top: 16px; }
+    .add-note-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .input-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .input-group.time-group { flex: 0 0 140px; }
+    .input-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+    .input-field { padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; width: 100%; background: white; }
+    .color-picker { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .color-picker-label { font-size: 12px; color: #6b7280; }
+    .color-swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+    .color-swatch.selected { border-color: #374151; }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-cancel { background: white; border: 1px solid #d1d5db; border-radius: 8px; padding: 9px 18px; font-size: 14px; cursor: pointer; color: #374151; }
+    .btn-save { background: #1a3a6b; color: white; border: none; border-radius: 8px; padding: 9px 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .empty-notes { text-align: center; color: #9ca3af; font-size: 13px; padding: 12px 0; }
+    .note-time-badge { font-size: 10px; background: rgba(0,0,0,0.08); border-radius: 3px; padding: 1px 5px; margin-left: 4px; }
+    .note-row-time { font-size: 11px; color: #9ca3af; background: #f3f4f6; border-radius: 4px; padding: 2px 6px; }
+    @media (max-width: 768px) { .sidebar { display: none; } .calendar-cell { min-height: 70px; } }
+  </style>
+</head>
+<body>
+<div class="navbar">
+  <div class="navbar-brand"><div class="navbar-icon">📅</div><div><div class="navbar-title">ปฏิทินจดโน้ต - สินอุดมพานิช</div><div class="navbar-subtitle">Note Calendar</div></div></div>
+  <div class="navbar-actions"><button class="btn-admin">Admin</button><button class="btn-logout">ออกจากระบบ</button></div>
+</div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-item active"><span class="sidebar-icon">📅</span> ปฏิทิน</div>
+    <div class="sidebar-item"><span class="sidebar-icon">📝</span> โน้ตทั้งหมด</div>
+    <div class="sidebar-item"><span class="sidebar-icon">🔖</span> หมวดหมู่</div>
+    <div class="sidebar-item"><span class="sidebar-icon">🔔</span> การแจ้งเตือน</div>
+    <div class="sidebar-item"><span class="sidebar-icon">⚙️</span> ตั้งค่า</div>
+  </div>
+  <div class="main">
+    <div class="calendar-controls">
+      <div class="month-nav">
+        <button class="btn-nav" onclick="changeMonth(-1)">◀ เดือนก่อน</button>
+        <div class="month-label" id="monthLabel"></div>
+        <button class="btn-nav" onclick="changeMonth(1)">เดือนถัดไป ▶</button>
+      </div>
+      <button class="btn-today" onclick="goToday()">วันนี้</button>
+    </div>
+    <div class="calendar">
+      <div class="calendar-header">
+        <div class="calendar-header-cell">อา</div><div class="calendar-header-cell">จ</div>
+        <div class="calendar-header-cell">อ</div><div class="calendar-header-cell">พ</div>
+        <div class="calendar-header-cell">พฤ</div><div class="calendar-header-cell">ศ</div>
+        <div class="calendar-header-cell">ส</div>
+      </div>
+      <div class="calendar-body" id="calendarBody"></div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-date" id="modalDateLabel"></div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="notes-list" id="modalNotesList"></div>
+      <div class="add-note-section">
+        <div class="add-note-label">➕ เพิ่มโน้ตใหม่</div>
+        <div class="input-row">
+          <div class="input-group"><span class="input-label">📝 รายละเอียด</span><input class="input-field" id="noteInput" type="text" placeholder="พิมพ์โน้ต..." maxlength="80" onkeydown="if(event.key==='Enter') saveNote()" /></div>
+          <div class="input-group time-group"><span class="input-label">🕐 เวลา</span><input class="input-field" id="timeInput" type="time" /></div>
+        </div>
+        <div class="color-picker">
+          <span class="color-picker-label">สี:</span>
+          <div class="color-swatch selected" style="background:#22c55e" data-color="green" onclick="selectColor(this)"></div>
+          <div class="color-swatch" style="background:#3b82f6" data-color="blue" onclick="selectColor(this)"></div>
+          <div class="color-swatch" style="background:#eab308" data-color="yellow" onclick="selectColor(this)"></div>
+          <div class="color-swatch" style="background:#ef4444" data-color="red" onclick="selectColor(this)"></div>
+          <div class="color-swatch" style="background:#8b5cf6" data-color="purple" onclick="selectColor(this)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeModal()">ปิด</button><button class="btn-save" onclick="saveNote()">บันทึก</button></div>
+  </div>
+</div>
+<script>
+  const THAI_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const COLORS={green:{bg:'#dcfce7',text:'#166534',dot:'#22c55e'},blue:{bg:'#dbeafe',text:'#1e40af',dot:'#3b82f6'},yellow:{bg:'#fef9c3',text:'#854d0e',dot:'#eab308'},red:{bg:'#fee2e2',text:'#991b1b',dot:'#ef4444'},purple:{bg:'#ede9fe',text:'#5b21b6',dot:'#8b5cf6'}};
+  let currentYear,currentMonth,selectedDateKey=null,selectedColor='green';
+  let notes=JSON.parse(localStorage.getItem('calendarNotes')||'{}');
+  function saveToStorage(){localStorage.setItem('calendarNotes',JSON.stringify(notes));}
+  function getDateKey(y,m,d){return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+  function thaiYear(y){return y+543;}
+  function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function renderCalendar(){
+    const today=new Date();
+    document.getElementById('monthLabel').textContent=THAI_MONTHS[currentMonth]+' '+thaiYear(currentYear);
+    const body=document.getElementById('calendarBody');body.innerHTML='';
+    const firstDay=new Date(currentYear,currentMonth,1).getDay();
+    const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+    const daysInPrev=new Date(currentYear,currentMonth,0).getDate();
+    let cells=[];
+    for(let i=firstDay-1;i>=0;i--)cells.push({day:daysInPrev-i,month:currentMonth-1,year:currentMonth===0?currentYear-1:currentYear,other:true});
+    for(let d=1;d<=daysInMonth;d++)cells.push({day:d,month:currentMonth,year:currentYear,other:false});
+    let rem=42-cells.length;
+    for(let d=1;d<=rem;d++)cells.push({day:d,month:currentMonth+1,year:currentMonth===11?currentYear+1:currentYear,other:true});
+    cells.forEach(cell=>{
+      const div=document.createElement('div');
+      div.className='calendar-cell'+(cell.other?' other-month':'');
+      const isToday=!cell.other&&cell.day===today.getDate()&&cell.month===today.getMonth()&&cell.year===today.getFullYear();
+      if(isToday)div.classList.add('today');
+      const key=getDateKey(cell.year,cell.month,cell.day);
+      const dayNotes=notes[key]||[];
+      const daySpan=document.createElement('div');
+      daySpan.className='cell-day'+(isToday?' today-badge':'');
+      daySpan.textContent=cell.day;div.appendChild(daySpan);
+      [...dayNotes].sort((a,b)=>(a.time||'').localeCompare(b.time||'')).slice(0,3).forEach(note=>{
+        const c=COLORS[note.color]||COLORS.green;
+        const item=document.createElement('div');item.className='note-item';
+        item.style.background=c.bg;item.style.color=c.text;
+        item.innerHTML='<div class="note-dot" style="background:'+c.dot+'"></div><span class="note-text">'+escHtml(note.text)+'</span>'+(note.time?'<span class="note-time-badge">'+escHtml(note.time)+'</span>':'');
+        div.appendChild(item);
+      });
+      if(dayNotes.length>3){const more=document.createElement('div');more.className='note-more';more.textContent='+'+(dayNotes.length-3)+' รายการ';div.appendChild(more);}
+      div.addEventListener('click',()=>openModal(cell.year,cell.month,cell.day));
+      body.appendChild(div);
+    });
+  }
+  function openModal(y,m,d){
+    selectedDateKey=getDateKey(y,m,d);
+    document.getElementById('modalDateLabel').textContent='📅 '+d+' '+THAI_MONTHS[m]+' '+thaiYear(y);
+    renderModalNotes();document.getElementById('noteInput').value='';
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(()=>document.getElementById('noteInput').focus(),200);
+  }
+  function renderModalNotes(){
+    const list=document.getElementById('modalNotesList');
+    const dayNotes=notes[selectedDateKey]||[];
+    if(!dayNotes.length){list.innerHTML='<div class="empty-notes">ยังไม่มีโน้ตในวันนี้</div>';return;}
+    list.innerHTML='';
+    dayNotes.map((n,i)=>({...n,_idx:i})).sort((a,b)=>(a.time||'').localeCompare(b.time||'')).forEach(note=>{
+      const c=COLORS[note.color]||COLORS.green;
+      const row=document.createElement('div');row.className='note-row';
+      row.innerHTML='<div class="note-row-dot" style="background:'+c.dot+'"></div><div class="note-row-text">'+escHtml(note.text)+'</div>'+(note.time?'<span class="note-row-time">🕐 '+escHtml(note.time)+'</span>':'')+'<button class="note-row-delete" onclick="deleteNote('+note._idx+')">🗑</button>';
+      list.appendChild(row);
+    });
+  }
+  function deleteNote(idx){if(!notes[selectedDateKey])return;notes[selectedDateKey].splice(idx,1);if(!notes[selectedDateKey].length)delete notes[selectedDateKey];saveToStorage();renderModalNotes();renderCalendar();}
+  function saveNote(){const input=document.getElementById('noteInput');const text=input.value.trim();if(!text)return;const time=document.getElementById('timeInput').value||'';if(!notes[selectedDateKey])notes[selectedDateKey]=[];notes[selectedDateKey].push({text,color:selectedColor,time});saveToStorage();input.value='';document.getElementById('timeInput').value='';renderModalNotes();renderCalendar();}
+  function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+  function closeModalOutside(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+  function selectColor(el){document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));el.classList.add('selected');selectedColor=el.dataset.color;}
+  function changeMonth(delta){currentMonth+=delta;if(currentMonth<0){currentMonth=11;currentYear--;}if(currentMonth>11){currentMonth=0;currentYear++;}renderCalendar();}
+  function goToday(){const t=new Date();currentYear=t.getFullYear();currentMonth=t.getMonth();renderCalendar();}
+  const now=new Date();currentYear=now.getFullYear();currentMonth=now.getMonth();renderCalendar();
+</script>
+</body>
+</html>
