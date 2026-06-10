@@ -3,12 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>à¸à¸à¸´à¸à¸´à¸à¸à¸à¹à¸à¹à¸ - à¸ªà¸´à¸à¸­à¸¸à¸à¸¡à¸à¸²à¸à¸´à¸</title>
-
-  <!-- Firebase SDK (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+  <title>ปฏิทินจดโน้ต</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -53,16 +48,6 @@
       cursor: pointer; transition: background 0.2s;
     }
     .btn-logout:hover { background: rgba(255,255,255,0.25); }
-
-    /* Sync indicator */
-    #syncStatus {
-      font-size: 12px; padding: 4px 10px; border-radius: 20px;
-      background: rgba(255,255,255,0.15);
-      transition: background 0.3s;
-    }
-    #syncStatus.saving { background: rgba(245,166,35,0.4); }
-    #syncStatus.saved  { background: rgba(34,197,94,0.3); }
-    #syncStatus.error  { background: rgba(239,68,68,0.4); }
 
     /* ===== SIDEBAR ===== */
     .layout { display: flex; height: calc(100vh - 64px); }
@@ -166,6 +151,7 @@
     .note-text { overflow: hidden; text-overflow: ellipsis; }
     .note-more { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
+    /* Color themes */
     .color-green  { background: #dcfce7; color: #166534; }
     .color-green  .note-dot { background: #22c55e; }
     .color-blue   { background: #dbeafe; color: #1e40af; }
@@ -271,7 +257,10 @@
 
     .empty-notes { text-align: center; color: #9ca3af; font-size: 13px; padding: 12px 0; }
 
-    .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    /* ===== TIME & DATE INPUTS ===== */
+    .input-row {
+      display: flex; gap: 10px; margin-bottom: 10px;
+    }
     .input-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .input-group.time-group { flex: 0 0 140px; }
     .input-label { font-size: 12px; color: #6b7280; font-weight: 500; }
@@ -294,22 +283,68 @@
       background: #f3f4f6; border-radius: 4px; padding: 2px 6px;
     }
 
+    /* Date jump in controls */
+    .date-jump {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .date-jump-label { font-size: 13px; color: #6b7280; }
+    .date-jump-input {
+      padding: 7px 10px;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      font-size: 13px; font-family: inherit;
+      outline: none; cursor: pointer;
+      background: white; color: #374151;
+    }
+    .date-jump-input:focus { border-color: #1a3a6b; }
+
     /* ===== FLOW NODES ===== */
     .flow-node {
-      position: absolute; width: 190px;
-      background: white; border: 1.5px solid #93c5fd;
-      border-left: 4px solid #93c5fd; border-radius: 10px;
-      padding: 10px 12px; box-shadow: 0 2px 8px rgba(59,130,246,0.08);
-      transition: box-shadow 0.2s; cursor: default;
+      position: absolute;
+      width: 190px;
+      background: white;
+      border: 1.5px solid #93c5fd;
+      border-left: 4px solid #93c5fd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+      transition: box-shadow 0.2s;
+      cursor: default;
     }
     .flow-node:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
-    .flow-node-root { border-color: #1a3a6b; border-left-color: #1a3a6b; background: #f0f4ff; box-shadow: 0 2px 12px rgba(26,58,107,0.15); }
-    .flow-node-mixer { border-color: #d97706; border-left-color: #d97706; background: #fffbeb; }
-    .flow-node-slump { border-color: #0d9488; border-left-color: #0d9488; background: #f0fdfa; }
-    .flow-node-specimen { border-color: #3b82f6; border-left-color: #3b82f6; background: #eff6ff; }
-    .flow-node-test { border-color: #16a34a; border-left-color: #16a34a; background: #f0fdf4; }
 
-    .flow-node-type-badge { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; display: inline-block; margin-bottom: 5px; letter-spacing: .03em; text-transform: uppercase; }
+    /* Root */
+    .flow-node-root {
+      border-color: #1a3a6b; border-left-color: #1a3a6b;
+      background: #f0f4ff;
+      box-shadow: 0 2px 12px rgba(26,58,107,0.15);
+    }
+    /* โม่ผสม — amber */
+    .flow-node-mixer {
+      border-color: #d97706; border-left-color: #d97706;
+      background: #fffbeb;
+    }
+    /* Slump — teal */
+    .flow-node-slump {
+      border-color: #0d9488; border-left-color: #0d9488;
+      background: #f0fdfa;
+    }
+    /* ลูกปูน — blue */
+    .flow-node-specimen {
+      border-color: #3b82f6; border-left-color: #3b82f6;
+      background: #eff6ff;
+    }
+    /* เทส/ผลทดสอบ — green */
+    .flow-node-test {
+      border-color: #16a34a; border-left-color: #16a34a;
+      background: #f0fdf4;
+    }
+
+    /* Type badge */
+    .flow-node-type-badge {
+      font-size: 9px; font-weight: 700; padding: 1px 6px;
+      border-radius: 3px; display: inline-block;
+      margin-bottom: 5px; letter-spacing: .03em; text-transform: uppercase;
+    }
     .badge-root     { background: #dbeafe; color: #1e3a8a; }
     .badge-mixer    { background: #fef3c7; color: #92400e; }
     .badge-slump    { background: #ccfbf1; color: #115e59; }
@@ -317,23 +352,71 @@
     .badge-test     { background: #dcfce7; color: #14532d; }
     .badge-default  { background: #f1f5f9; color: #475569; }
 
-    .flow-node-ksc { font-size: 18px; font-weight: 800; color: #15803d; line-height: 1.2; margin: 4px 0 2px; }
-    .flow-node-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
-    .flow-node-title { font-size: 14px; font-weight: 700; color: #1e293b; outline: none; flex: 1; word-break: break-word; border-bottom: 1px dashed transparent; transition: border-color 0.2s; }
+    /* ksc result value */
+    .flow-node-ksc {
+      font-size: 18px; font-weight: 800; color: #15803d;
+      line-height: 1.2; margin: 4px 0 2px;
+    }
+
+    .flow-node-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .flow-node-title {
+      font-size: 14px; font-weight: 700; color: #1e293b;
+      outline: none; flex: 1; word-break: break-word;
+      border-bottom: 1px dashed transparent; transition: border-color 0.2s;
+    }
     .flow-node-title:focus { border-bottom-color: #93c5fd; }
-    .flow-node-del { background: none; border: none; color: #cbd5e1; font-size: 13px; cursor: pointer; padding: 0; margin-left: 6px; flex-shrink: 0; line-height: 1; }
+    .flow-node-del {
+      background: none; border: none; color: #cbd5e1;
+      font-size: 13px; cursor: pointer; padding: 0; margin-left: 6px;
+      flex-shrink: 0; line-height: 1;
+    }
     .flow-node-del:hover { color: #ef4444; }
-    .flow-node-tag { font-size: 11px; color: #1a3a6b; background: #dbeafe; border-radius: 4px; padding: 2px 7px; margin-bottom: 5px; display: inline-block; font-weight: 500; }
-    .flow-node-preview { font-size: 12px; color: #64748b; margin-bottom: 4px; line-height: 1.45; word-break: break-word; }
-    .flow-node-hint { font-size: 11px; color: #cbd5e1; font-style: italic; margin-bottom: 4px; cursor: pointer; }
+
+    .flow-node-tag {
+      font-size: 11px; color: #1a3a6b; background: #dbeafe;
+      border-radius: 4px; padding: 2px 7px; margin-bottom: 5px;
+      display: inline-block; font-weight: 500;
+    }
+    .flow-node-preview {
+      font-size: 12px; color: #64748b; margin-bottom: 4px;
+      line-height: 1.45; word-break: break-word;
+    }
+    .flow-node-hint {
+      font-size: 11px; color: #cbd5e1; font-style: italic;
+      margin-bottom: 4px; cursor: pointer;
+    }
     .flow-node { cursor: pointer; }
     .flow-node:hover .flow-node-hint { color: #93c5fd; }
-    .flow-node-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-    .flow-node-edit-btn { background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 5px; padding: 4px 10px; font-size: 11px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .flow-node-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 2px;
+    }
+    .flow-node-edit-btn {
+      background: white; color: #374151;
+      border: 1px solid #d1d5db; border-radius: 5px;
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
     .flow-node-edit-btn:hover { background: #f3f4f6; }
-    .flow-add-btn { position: absolute; width: 34px; height: 34px; border: 2px dashed #cbd5e1; border-radius: 8px; background: white; color: #94a3b8; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 2; }
-    .flow-add-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
 
+    .flow-add-btn {
+      position: absolute;
+      width: 34px; height: 34px;
+      border: 2px dashed #cbd5e1; border-radius: 8px;
+      background: white; color: #94a3b8;
+      font-size: 12px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; z-index: 2;
+    }
+    .flow-add-btn:hover {
+      border-color: #3b82f6; color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
       .sidebar { display: none; }
       .calendar-cell { min-height: 70px; padding: 4px; }
@@ -347,49 +430,48 @@
 <!-- NAVBAR -->
 <div class="navbar">
   <div class="navbar-brand">
-    <div class="navbar-icon">ð</div>
+    <div class="navbar-icon">📅</div>
     <div>
-      <div class="navbar-title">à¸à¸à¸´à¸à¸´à¸à¸à¸à¹à¸à¹à¸ - à¸ªà¸´à¸à¸­à¸¸à¸à¸¡à¸à¸²à¸à¸´à¸</div>
-      <div class="navbar-subtitle">Note Calendar</div>
+      <div class="navbar-title">ปฏิทินจดโน้ต</div>
+      <div class="navbar-subtitle">Note Calendar · admin@demo.com</div>
     </div>
   </div>
   <div class="navbar-actions">
-    <span id="syncStatus">âï¸ à¸à¸³à¸¥à¸±à¸à¹à¸«à¸¥à¸...</span>
     <button class="btn-admin">Admin</button>
-    <button class="btn-logout">à¸­à¸­à¸à¸à¸²à¸à¸£à¸°à¸à¸</button>
+    <button class="btn-logout">ออกจากระบบ</button>
   </div>
 </div>
 
 <div class="layout">
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-item active"><span class="sidebar-icon">ð</span> à¸à¸à¸´à¸à¸´à¸</div>
-    <div class="sidebar-item"><span class="sidebar-icon">ð</span> à¹à¸à¹à¸à¸à¸±à¹à¸à¸«à¸¡à¸</div>
-    <div class="sidebar-item"><span class="sidebar-icon">ð</span> à¸«à¸¡à¸§à¸à¸«à¸¡à¸¹à¹</div>
-    <div class="sidebar-item"><span class="sidebar-icon">ð</span> à¸à¸²à¸£à¹à¸à¹à¸à¹à¸à¸·à¸­à¸</div>
-    <div class="sidebar-item"><span class="sidebar-icon">âï¸</span> à¸à¸±à¹à¸à¸à¹à¸²</div>
+    <div class="sidebar-item active"><span class="sidebar-icon">📅</span> ปฏิทิน</div>
+    <div class="sidebar-item"><span class="sidebar-icon">📝</span> โน้ตทั้งหมด</div>
+    <div class="sidebar-item"><span class="sidebar-icon">🔖</span> หมวดหมู่</div>
+    <div class="sidebar-item"><span class="sidebar-icon">🔔</span> การแจ้งเตือน</div>
+    <div class="sidebar-item"><span class="sidebar-icon">⚙️</span> ตั้งค่า</div>
   </div>
 
   <!-- MAIN -->
   <div class="main">
     <div class="calendar-controls">
       <div class="month-nav">
-        <button class="btn-nav" onclick="changeMonth(-1)">â à¹à¸à¸·à¸­à¸à¸à¹à¸­à¸</button>
+        <button class="btn-nav" onclick="changeMonth(-1)">◀ เดือนก่อน</button>
         <div class="month-label" id="monthLabel"></div>
-        <button class="btn-nav" onclick="changeMonth(1)">à¹à¸à¸·à¸­à¸à¸à¸±à¸à¹à¸ â¶</button>
+        <button class="btn-nav" onclick="changeMonth(1)">เดือนถัดไป ▶</button>
       </div>
-      <button class="btn-today" onclick="goToday()">à¸§à¸±à¸à¸à¸µà¹</button>
+      <button class="btn-today" onclick="goToday()">วันนี้</button>
     </div>
 
     <div class="calendar">
       <div class="calendar-header">
-        <div class="calendar-header-cell">à¸­à¸²</div>
-        <div class="calendar-header-cell">à¸</div>
-        <div class="calendar-header-cell">à¸­</div>
-        <div class="calendar-header-cell">à¸</div>
-        <div class="calendar-header-cell">à¸à¸¤</div>
-        <div class="calendar-header-cell">à¸¨</div>
-        <div class="calendar-header-cell">à¸ª</div>
+        <div class="calendar-header-cell">อา</div>
+        <div class="calendar-header-cell">จ</div>
+        <div class="calendar-header-cell">อ</div>
+        <div class="calendar-header-cell">พ</div>
+        <div class="calendar-header-cell">พฤ</div>
+        <div class="calendar-header-cell">ศ</div>
+        <div class="calendar-header-cell">ส</div>
       </div>
       <div class="calendar-body" id="calendarBody"></div>
     </div>
@@ -401,24 +483,36 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-date" id="modalDateLabel"></div>
-      <button class="modal-close" onclick="closeModal()">â</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
       <div class="notes-list" id="modalNotesList"></div>
+
       <div class="add-note-section">
-        <div class="add-note-label">â à¹à¸à¸´à¹à¸¡à¹à¸à¹à¸à¹à¸«à¸¡à¹</div>
+        <div class="add-note-label">➕ เพิ่มโน้ตใหม่</div>
         <div class="input-row">
           <div class="input-group">
-            <span class="input-label">ð à¸£à¸²à¸¢à¸¥à¸°à¹à¸­à¸µà¸¢à¸</span>
-            <input class="input-field" id="noteInput" type="text" placeholder="à¸à¸´à¸¡à¸à¹à¹à¸à¹à¸..." maxlength="80" onkeydown="if(event.key==='Enter') saveNote()" />
+            <span class="input-label">📝 รายละเอียด</span>
+            <input
+              class="input-field"
+              id="noteInput"
+              type="text"
+              placeholder="พิมพ์โน้ต..."
+              maxlength="80"
+              onkeydown="if(event.key==='Enter') saveNote()"
+            />
           </div>
           <div class="input-group time-group">
-            <span class="input-label">ð à¹à¸§à¸¥à¸²</span>
-            <input class="input-field" id="timeInput" type="time" />
+            <span class="input-label">🕐 เวลา</span>
+            <input
+              class="input-field"
+              id="timeInput"
+              type="time"
+            />
           </div>
         </div>
         <div class="color-picker">
-          <span class="color-picker-label">à¸ªà¸µ:</span>
+          <span class="color-picker-label">สี:</span>
           <div class="color-swatch selected" style="background:#22c55e" data-color="green"  onclick="selectColor(this)"></div>
           <div class="color-swatch"          style="background:#3b82f6" data-color="blue"   onclick="selectColor(this)"></div>
           <div class="color-swatch"          style="background:#eab308" data-color="yellow" onclick="selectColor(this)"></div>
@@ -428,138 +522,977 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal()">à¸à¸´à¸</button>
-      <button class="btn-save"   onclick="saveNote()">à¸à¸±à¸à¸à¸¶à¸</button>
+      <button class="btn-cancel" onclick="closeModal()">ปิด</button>
+      <button class="btn-save"   onclick="saveNote()">บันทึก</button>
     </div>
   </div>
 </div>
 
 <!-- LIGHTBOX -->
-<div id="lightbox" style="position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:1300;opacity:0;pointer-events:none;transition:opacity 0.2s">
-  <button id="lbPrev" onclick="lbNav(-1)" style="position:fixed;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:44px;height:44px;font-size:22px;cursor:pointer;display:none;">â¹</button>
+<div id="lightbox" style="
+  position:fixed;inset:0;background:rgba(0,0,0,0.9);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1300;opacity:0;pointer-events:none;transition:opacity 0.2s;">
+  <!-- Prev -->
+  <button id="lbPrev" onclick="lbNav(-1)" style="
+    position:fixed;left:16px;top:50%;transform:translateY(-50%);
+    background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;
+    width:44px;height:44px;font-size:22px;cursor:pointer;transition:background 0.2s;display:none;"
+    onmouseenter="this.style.background='rgba(255,255,255,0.3)'"
+    onmouseleave="this.style.background='rgba(255,255,255,0.15)'">‹</button>
+  <!-- Image -->
   <div onclick="closeLightbox()" style="position:fixed;inset:0;cursor:zoom-out;"></div>
-  <img id="lightboxImg" src="" style="max-width:88vw;max-height:88vh;position:relative;border-radius:10px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,0.6);transform:scale(0.9);transition:transform 0.2s,opacity 0.15s;"/>
-  <button id="lbNext" onclick="lbNav(1)" style="position:fixed;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:44px;height:44px;font-size:22px;cursor:pointer;display:none;">âº</button>
+  <img id="lightboxImg" src="" style="
+    max-width:88vw;max-height:88vh;position:relative;
+    border-radius:10px;object-fit:contain;
+    box-shadow:0 8px 40px rgba(0,0,0,0.6);
+    transform:scale(0.9);transition:transform 0.2s,opacity 0.15s;"/>
+  <!-- Next -->
+  <button id="lbNext" onclick="lbNav(1)" style="
+    position:fixed;right:16px;top:50%;transform:translateY(-50%);
+    background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;
+    width:44px;height:44px;font-size:22px;cursor:pointer;transition:background 0.2s;display:none;"
+    onmouseenter="this.style.background='rgba(255,255,255,0.3)'"
+    onmouseleave="this.style.background='rgba(255,255,255,0.15)'">›</button>
+  <!-- Counter + Close -->
   <div style="position:fixed;top:16px;width:100%;display:flex;justify-content:center;align-items:center;gap:12px;">
     <span id="lbCounter" style="color:rgba(255,255,255,0.7);font-size:13px;"></span>
   </div>
-  <button onclick="closeLightbox()" style="position:fixed;top:16px;right:20px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;">â</button>
+  <button onclick="closeLightbox()" style="
+    position:fixed;top:16px;right:20px;
+    background:rgba(255,255,255,0.15);color:white;
+    border:none;border-radius:50%;
+    width:38px;height:38px;font-size:18px;cursor:pointer;transition:background 0.2s;"
+    onmouseenter="this.style.background='rgba(255,255,255,0.3)'"
+    onmouseleave="this.style.background='rgba(255,255,255,0.15)'">✕</button>
 </div>
 
 <!-- NODE EDIT MODAL -->
-<div id="nodeEditOverlay" onclick="if(event.target===this)closeNodeEdit()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1200;opacity:0;pointer-events:none;transition:opacity 0.15s;">
-  <div style="background:white;border-radius:14px;width:460px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:scale(0.95);transition:transform 0.15s;overflow:hidden;" id="nodeEditPanel">
+<div id="nodeEditOverlay" onclick="if(event.target===this)closeNodeEdit()" style="
+  position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1200;opacity:0;pointer-events:none;transition:opacity 0.15s;">
+  <div style="
+    background:white;border-radius:14px;width:460px;max-width:95vw;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+    transform:scale(0.95);transition:transform 0.15s;overflow:hidden;" id="nodeEditPanel">
+
     <div style="background:linear-gradient(135deg,#1a3a6b,#1e4d8c);color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:15px;font-weight:700;">âï¸ à¹à¸à¹à¹à¸à¸«à¸±à¸§à¸à¹à¸­</div>
-      <button onclick="closeNodeEdit()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;opacity:0.8;">â</button>
+      <div style="font-size:15px;font-weight:700;">✏️ แก้ไขหัวข้อ</div>
+      <button onclick="closeNodeEdit()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;opacity:0.8;">✕</button>
     </div>
-    <div style="padding:20px;display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y=auto;">
+
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto;">
       <div>
-        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">ð à¸«à¸±à¸§à¸à¹à¸­</label>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">📌 หัวข้อ</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;" id="neTitlePicker">
-          <button type="button" data-title="à¹à¸¡à¹" data-type="mixer" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #d97706;background:#fffbeb;color:#92400e;font-size:12px;cursor:pointer;font-family:inherit;">ð­ à¹à¸¡à¹</button>
-          <button type="button" data-title="Slump" data-type="slump" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #0d9488;background:#f0fdfa;color:#115e59;font-size:12px;cursor:pointer;font-family:inherit;">ð Slump</button>
-          <button type="button" data-title="à¸¥à¸¹à¸à¸à¸¹à¸" data-type="specimen" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #3b82f6;background:#eff6ff;color:#1e40af;font-size:12px;cursor:pointer;font-family:inherit;">ð§±à¸¥à¸¹à¸à¸à¸¹à¸</button>
-          <button type="button" data-title="à¸à¸¥à¸à¸à¸ªà¸­à¸" data-type="test" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #16a34a;background:#f0fdf4;color:#14532d;font-size:12px;cursor:pointer;font-family:inherit;">â à¸à¸¥à¸à¸à¸ªà¸­à¸</button>
-          <button type="button" data-title="custom" data-type="auto" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #d1d5db;background:white;color:#374151;font-size:12px;cursor:pointer;font-family:inherit;">âï¸ à¹à¸à¸´à¹à¸¡à¹à¸à¸´à¸¡</button>
+          <button type="button" data-title="โม่" data-type="mixer" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #d97706;background:#fffbeb;color:#92400e;font-size:12px;cursor:pointer;font-family:inherit;">🏭 โม่</button>
+          <button type="button" data-title="Slump" data-type="slump" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #0d9488;background:#f0fdfa;color:#115e59;font-size:12px;cursor:pointer;font-family:inherit;">📏 Slump</button>
+          <button type="button" data-title="ลูกปูน" data-type="specimen" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #3b82f6;background:#eff6ff;color:#1e40af;font-size:12px;cursor:pointer;font-family:inherit;">🧱 ลูกปูน</button>
+          <button type="button" data-title="ผลทดสอบ" data-type="test" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #16a34a;background:#f0fdf4;color:#14532d;font-size:12px;cursor:pointer;font-family:inherit;">✅ ผลทดสอบ</button>
+          <button type="button" data-title="custom" data-type="auto" onclick="pickNodeTitle(this)" style="padding:6px 12px;border-radius:20px;border:1.5px solid #d1d5db;background:white;color:#374151;font-size:12px;cursor:pointer;font-family:inherit;">✏️ เพิ่มเติม</button>
         </div>
+        <!-- Number suffix input (for preset titles like โม่, Slump, etc.) -->
         <div id="neTitleNumberRow" style="display:none;margin-top:8px;align-items:center;gap:8px;">
           <span id="neTitlePreview" style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;"></span>
-          <input id="neTitleNumber" type="number" placeholder="à¹à¸ªà¹à¹à¸¥à¸..." min="1" style="width:100px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;" onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'" oninput="updateTitlePreview()"/>
-          <span style="font-size:12px;color:#9ca3af;">â à¹à¸ªà¹à¸«à¸£à¸·à¸­âæâæ'âgâæ#âËâæâSæ$ð½ÍÁ¸ø(ð½¥Øø(ñ¥¹ÁÕÐ¥ô¹Q¥Ñ±ÑåÁôÑáÐÁ±¡½±Èôâ{âÓââ{æ3â¯âÇââæ'â·æâ¯âæ ¸¸¸ÍÑå±ô¥ÍÁ±äé¹½¹íÝ¥Ñ èÄÀÀíÁ¥¹èåÁàÄÉÁàí½ÉÈèÅÁàÍ½±¥ÅÕí½ÉÈµÉ¥ÕÌèáÁàí½¹ÐµÍ¥éèÄÑÁàí½¹Ðµµ¥±äé¥¹¡É¥Ðí½ÕÑ±¥¹é¹½¹íµÉ¥¸µÑ½ÀèáÁàì½¹½ÕÌôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÍÙ½¹±ÕÈôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÕ¼ø(ð½¥Øø(ñ¥Ø¥ô¹QåÁA¥­ÈÍÑå±ô¥ÍÁ±äé¹½¹ìøð½¥Øø(ñ¥Øø(ñ±°ÍÑå±ô½¹ÐµÍ¥éèÄÉÁàí½¹ÐµÝ¥¡ÐèØÀÀí½±½ÈèÌÜÐÄÔÄí¥ÍÁ±äé±½¬íµÉ¥¸µ½ÑÑ½´èÕÁàìûÂ~V@æâââÈð½±°ø(ñ¥¹ÁÕÐ¥ô¹Q¥µÑåÁôÑ¥µÍÑå±ôÝ¥Ñ èÄÀÀíÁ¥¹èåÁàÄÉÁàí½ÉÈèÅÁàÍ½±¥ÅÕí½ÉÈµÉ¥ÕÌèáÁàí½¹ÐµÍ¥éèÄÑÁàí½¹Ðµµ¥±äé¥¹¡É¥Ðí½ÕÑ±¥¹é¹½¹ì½¹½ÕÌôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÍÙ½¹±ÕÈôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÕ¼ø(ð½¥Øø(ñ¥Øø(ñ±°ÍÑå±ô½¹ÐµÍ¥éèÄÉÁàí½¹ÐµÝ¥¡ÐèØÀÀí½±½ÈèÌÜÐÄÔÄí¥ÍÁ±äé±½¬íµÉ¥¸µ½ÑÑ½´èÕÁàìûÂ~NââËâââÃæâ·â×ââPð½±°ø(ñÑáÑÉ¥ô¹Ñ¥°Á±¡½±ÈôââËâââÃæâ·â×ââSæâ{âÓæ#âæâWâÓâ¸¸¸É½ÝÌôÐÍÑå±ôÝ¥Ñ èÄÀÀíÁ¥¹èåÁàÄÉÁàí½ÉÈèÅÁàÍ½±¥ÅÕí½ÉÈµÉ¥ÕÌèáÁàí½¹ÐµÍ¥éèÄÑÁàí½¹Ðµµ¥±äé¥¹¡É¥Ðí½ÕÑ±¥¹é¹½¹íÉÍ¥ééÙÉÑ¥°ì½¹½ÕÌôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÍÙ½¹±ÕÈôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÕøð½ÑáÑÉø(ð½¥Øø(ñ¥Øø(ñ±°ÍÑå±ô½¹ÐµÍ¥éèÄÉÁàí½¹ÐµÝ¥¡ÐèØÀÀí½±½ÈèÌÜÐÄÔÄí¥ÍÁ±äé±½¬íµÉ¥¸µ½ÑÑ½´èÕÁàìûÂ~Ntâ¯ââËâæâ¯âWâàð½±°ø(ñ¥¹ÁÕÐ¥ô¹5µ¼ÑåÁôÑáÐÁ±¡½±Èôâ¯ââËâæâ¯âWâãâ«âÇæ'âgæ¸¸¸ÍÑå±ôÝ¥Ñ èÄÀÀíÁ¥¹èåÁàÄÉÁàí½ÉÈèÅÁàÍ½±¥ÅÕí½ÉÈµÉ¥ÕÌèáÁàí½¹ÐµÍ¥éèÄÑÁàí½¹Ðµµ¥±äé¥¹¡É¥Ðí½ÕÑ±¥¹é¹½¹ì½¹½ÕÌôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÍÙ½¹±ÕÈôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÕ¼ø(ð½¥Øø(ñ¥Øø(ñ±°ÍÑå±ô½¹ÐµÍ¥éèÄÉÁàí½¹ÐµÝ¥¡ÐèØÀÀí½±½ÈèÌÜÐÄÔÄí¥ÍÁ±äé±½¬íµÉ¥¸µ½ÑÑ½´èáÁàìûÂ~Zó¾â<ââçâoââËâxð½±°ø(ñ¥Ø¥ô¹%µÍÉ¥ÍÑå±ô¥ÍÁ±äéÉ¥íÉ¥µÑµÁ±Ñµ½±Õµ¹ÌéÉÁÐ Ì°ÅÈ¤íÀèáÁàíµÉ¥¸µ½ÑÑ½´èáÁàìøð½¥Øø(ñ¥Ø½¹±¥¬ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹%µ%¹ÁÕÐ¤¹±¥¬ ¤ÍÑå±ô½ÉÈèÉÁàÍ¡ÅÕí½ÉÈµÉ¥ÕÌèÄÁÁàíÁ¥¹èÄÉÁàíÑáÐµ±¥¸é¹ÑÈíÕÉÍ½ÈéÁ½¥¹ÑÈíÑÉ¹Í¥Ñ¥½¸é½ÉÈµ½±½ÈÀ¸ÉÌí­É½Õ¹èì½¹µ½ÕÍ¹ÑÈôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÍàÉØ½¹µ½ÕÍ±ÙôÑ¡¥Ì¹ÍÑå±¹½ÉÉ
-½±½ÈôÅÕø(ñÍÁ¸ÍÑå±ô½±½ÈèåÍí½¹ÐµÍ¥éèÄÍÁàìûzTæâ{âÓæ#âââçâoââËâxð½ÍÁ¸øñÈ¼ø(ñÍÁ¸ÍÑå±ô½¹ÐµÍ¥éèÄÅÁàí½±½ÈèÅÕìùA9°)A°%£æâæ#æââÓâdÔÁ5¼ââçâl¤ð½ÍÁ¸ø(ñ¥¹ÁÕÐ¥ô¹%µ%¹ÁÕÐÑåÁô¥±ÁÐô¥µ¼¨µÕ±Ñ¥Á±ÍÑå±ô¥ÍÁ±äé¹½¹ì½¹¡¹ô¡¹±%µUÁ±½¡Ù¹Ð¤¼ø(ð½¥Øø(ð½¥Øø(ð½¥Øø(ñ¥ØÍÑå±ôÁ¥¹èÀÈÁÁàÈÁÁàí¥ÍÁ±äé±àíÀèáÁàí©ÕÍÑ¥äµ½¹Ñ¹Ðé±àµ¹ìø(ñÕÑÑ½¸½¹±¥¬ô±½Í9½¥Ð ¤ÍÑå±ô­É½Õ¹éÝ¡¥Ñí½ÉÈèÅÁàÍ½±¥ÅÕí½ÉÈµÉ¥ÕÌèáÁàíÁ¥¹èåÁàÄáÁàí½¹ÐµÍ¥éèÄÑÁàíÕÉÍ½ÈéÁ½¥¹ÑÈí½±½ÈèÌÜÐÄÔÄìûââæââÓâð½ÕÑÑ½¸ø(ñÕÑÑ½¸½¹±¥¬ôÍÙ9½¥Ð ¤ÍÑå±ô­É½Õ¹èÅÍÙí½±½ÈéÝ¡¥Ñí½ÉÈé¹½¹í½ÉÈµÉ¥ÕÌèáÁàíÁ¥¹èåÁàÈÁÁàí½¹ÐµÍ¥éèÄÑÁàí½¹ÐµÝ¥¡ÐèØÀÀíÕÉÍ½ÈéÁ½¥¹ÑÈìûÂ~JøâkâÇâgâ_âÛâð½ÕÑÑ½¸ø(ð½¥Øø(ð½¥Øø(ð½¥Øø((ð´´1=\=YI1d´´ø(ñ¥Ø¥ô±½Ý=ÙÉ±äÍÑå±ôÁ½Í¥Ñ¥½¸é¥áí¥¹ÍÐèÀí­É½Õ¹éÉ À°À°À°À¸ÔÔ¤í¥ÍÁ±äé±àí±¥¸µ¥ÑµÌé¹ÑÈí©ÕÍÑ¥äµ½¹Ñ¹Ðé¹ÑÈíèµ¥¹àèÄÄÀÀí½Á¥ÑäèÀíÁ½¥¹ÑÈµÙ¹ÑÌé¹½¹íÑÉ¹Í¥Ñ¥½¸é½Á¥ÑäÀ¸ÉÌìø(ñ¥Ø¥ô±½ÝA¹°ÍÑå±ô­É½Õ¹éÝ¡¥Ñí½ÉÈµÉ¥ÕÌèÄÑÁàíÝ¥Ñ éµ¥¸ äÕÙÜ°ÄÄÀÁÁà¤í¡¥¡Ðéµ¥¸ äÁÙ °ÜÀÁÁà¤í¥ÍÁ±äé±àí±àµ¥ÉÑ¥½¸é½±Õµ¸í½ÙÉ±½Üé¡¥¸í½àµÍ¡½ÜèÀÈÑÁààÁÁàÉ À°À°À°À¸ÈÔ¤íÑÉ¹Í½É´éÑÉ¹Í±Ñd ÈÁÁà¤íÑÉ¹Í¥Ñ¥½¸éÑÉ¹Í½É´À¸ÉÌìø(ñ¥ØÍÑå±ô­É½Õ¹é±¥¹ÈµÉ¥¹Ð ÄÌÕ°ÅÍÙ°ÅÑá¤í½±½ÈéÝ¡¥ÑíÁ¥¹èÄÑÁàÈÁÁàí¥ÍÁ±äé±àí±¥¸µ¥ÑµÌé±àµÍÑÉÐí©ÕÍÑ¥äµ½¹Ñ¹ÐéÍÁµÑÝ¸í±àµÍ¡É¥¹¬èÀìø(ñ¥Øø(ñ¥Ø¥ô±½ÝÑ1°ÍÑå±ô½¹ÐµÍ¥éèÄÙÁàí½¹ÐµÝ¥¡ÐèÜÀÀìøð½¥Øø(ñ¥ØÍÑå±ô½¹ÐµÍ¥éèÄÉÁàí½Á¥ÑäèÀ¸ÜíµÉ¥¸µÑ½ÀèÉÁàûâsâæâ¯â«âoâãâdð½¥Øø(ð½¥Øø(ñ¥ØÍÑå±ô¥ÍÁ±äé±àí±¥¸µ¥ÑµÌé¹ÑÈíÀèáÁàìø(ñ¥ØÍÑå±ô¥ÍÁ±äé±àí±¥¸µ¥ÑµÌé¹ÑÈíÀèÑÁàí­É½Õ¹éÉ ÈÔÔ°ÈÔÔ°ÈÔÔ°À¸ÄÔ¤í½ÉÈµÉ¥ÕÌèáÁàíÁ¥¹èÎàÙÁàìø(ñÕÑÑ½¸½¹±¥¬ôé½½µ±½Ü ´À¸Ä¤ÍÑå±ô­É½Õ¹é¹½¹í½ÉÈé¹½¹í½±½ÈéÝ¡¥Ñí½¹ÐµÍ¥éèÄáÁàíÕÉÍ½ÈéÁ½¥¹ÑÈíÝ¥Ñ èÈáÁàí¡¥¡ÐèÈáÁàí±¥¹µ¡¥¡ÐèÄí½ÉÈµÉ¥ÕÌèÑÁàìû"Hð½ÕÑÑ½¸ø(ñÍÁ¸¥ôé½½µ1°ÍÑå±ô½±½ÈéÝ¡¥Ñí½¹ÐµÍ¥éèÄÉÁàí½¹ÐµÝ¥¡ÐèØÀÀíµ¥¸µÝ¥Ñ èÌÙÁàíÑáÐµ±¥¸é¹ÑÈìøÄÀÀð½ÍÁ¸ø(ñÕÑÑ½¸½¹±¥¬ôé½½µ±½Ü À¸Ä¤ÍÑå±ô­É½Õ¹é¹½¹í½ÉÈé¹½¹í½±½ÈéÝ¡¥Ñí½¹ÐµÍ¥éèÄáÁàíÕÉÍ½ÈéÁ½¥¹ÑÈíÝ¥Ñ èÈáÁàí¡¥¡ÐèÈáÁàí±¥¹µ¡¥¡ÐèÄí½ÉÈµÉ¥ÕÌèÑÁàìø¬ð½ÕÑÑ½¸ø(ñÕÑÑ½¸½¹±¥¬ôé½½µ±½Ü À¤ÍÑå±ô­É½Õ¹é¹½¹í½ÉÈé¹½¹í½±½ÈéÉ ÈÔÔ°ÈÔÔ°ÈÔÔ°À¸Ü¤í½¹ÐµÍ¥éèÄÁÁàíÕÉÍ½ÈéÁ½¥¹ÑÈíÁ¥¹èÀÑÁàí½ÉÈµÉ¥ÕÌèÑÁàìûèð½ÕÑÑ½¸ø(ð½¥Øø(ñÕÑÑ½¸½¹±¥¬ô±½Í±½Ü ¤ÍÑå±ô­É½Õ¹é¹½¹í½ÉÈé¹½¹í½±½ÈéÝ¡¥Ñí½¹ÐµÍ¥éèÈÉÁàíÕÉÍ½ÈéÁ½¥¹ÑÈí½Á¥ÑäèÀ¸àí±¥¹µ¡¥¡ÐèÄìûrTð½ÕÑÑ½¸ø(ð½¥Øø(ð½¥Øø(ñ¥ØÍÑå±ô­É½Õ¹èÅÕäí½ÉÈµ½ÑÑ½´èÅÁàÍ½±¥ÉáÀíÁ¥¹èÄÁÁàÈÁÁàí¥ÍÁ±äé±àí±¥¸µ¥ÑµÌé¹ÑÈíÀèÙÁàí±àµÍ¡É¥¹¬èÀìø(ñÕÑÑ½¸½¹±¥¬ô±½Ý9Ù	¬ ¤ÍÑå±ô­É½Õ¹èÅÍÙí½±½ÈéÝ¡¥Ñí½ÉÈé¹½¹í½ÉÈµÉ¥ÕÌèÙÁàíÁ¥¹èÕÁàÄÑÁàí½¹ÐµÍ¥éèÄÍÁàí½¹ÐµÝ¥¡ÐèØÀÀíÕÉÍ½ÈéÁ½¥¹ÑÈìû@âââÇâhð½ÕÑÑ½¸ø(ñ¥Ø¥ô±½Ý	ÉÉÕµøð½¥Øø(ð½¥Øø(ñ¥Ø¥ô±½ÝMÉ½±°ÍÑå±ô±àèÄí½ÙÉ±½ÜéÕÑ¼íÁ½Í¥Ñ¥½¸éÉ±Ñ¥ÙíÁ¥¹èÌÁÁàìø(ñ¥Ø¥ô±½Ý
-¹ÙÌÍÑå±ôÁ½Í¥Ñ¥½¸éÉ±Ñ¥Ùíµ¥¸µÝ¥Ñ èØÀÁÁàíµ¥¸µ¡¥¡ÐèÐÀÁÁàìø(ñÍÙ¥ô±½ÝMÙÍÑå±ôÁ½Í¥Ñ¥½¸éÍ½±ÕÑíÑ½ÀèÀí±ÐèÀíÁ½¥¹ÑÈµÙ¹ÑÌé¹½¹í½ÙÉ±½ÜéÙ¥Í¥±ìø(ñÌøñµÉ­È¥ôÉÈµÉ­É]¥Ñ ôàµÉ­É!¥¡ÐôàÉ`ôØÉdôÌ½É¥¹ÐôÕÑ¼øñÁÑ ô4À°À0À°Ø0à°Ìè¥±°ôäÑÍà¼øð½µÉ­Èøð½Ìø(ð½ÍÙø(ð½¥Øø(ð½¥Øø(ð½¥Øø(ð½¥Øø((ñÍÉ¥ÁÐø(¼¨ôôôôô%I	M%9%Pôôôôô¨¼(½¹ÍÐ¥ÉÍ
-½¹¥ôì(Á¥-äè%éMåÑÍ0ÔåM]}E½-=ÝI½ÉMÉ5­©Ý}<Í°(ÕÑ¡½µ¥¸èÍ¥¹Õ½´´ÙÐä¹¥ÉÍÁÀ¹½´°(ÁÉ½©Ñ%èÍ¥¹Õ½´´ÙÐä°(ÍÑ½É	Õ­ÐèÍ¥¹Õ½´´ÙÐä¹¥ÉÍÍÑ½É¹ÁÀ°(µÍÍ¥¹M¹É%èÄÀÀÜäÈÄØÜÌÀØÄ°(ÁÁ%èÄèÄÀÀÜäÈÄØÜÌÀØÄéÝèÀÙÈÑÙàÀÑÜá(ôì(¥ÉÍ¹¥¹¥Ñ¥±¥éÁÀ¡¥ÉÍ
-½¹¥¤ì(½¹ÍÐô¥ÉÍ¹¥ÉÍÑ½É ¤ì((¼¨ôôôôôMQQôôôôô¨¼(½¹ÍÐQ!%}5=9Q!LôlââââËââ°ââãâââËâ{âÇâgâcæ0°ââ×âgâËââ°æââ§âËââd°â{ââ§ââËââ°ââÓâ[âãâgâËââd°(ââââ;âËââ°â«âÓââ¯âËââ°ââÇâgââËââd°âWâãââËââ°â{ââ£â#âÓââËââd°âcâÇâgââËââtì(½¹ÍÐ
-=1=ILôì(É¸èìèÜ°ÑáÐèÄØØÔÌÐ°½ÐèÈÉÔÕô°(±Õèìè°ÑáÐèÅÐÁ°½ÐèÍàÉØô°(å±±½ÜèìèåÌ°ÑáÐèàÔÑÁ°½ÐèÌÀàô°(ÉèìèÉÈ°ÑáÐèääÅÅ°½ÐèÐÐÐÐô°(ÁÕÉÁ±èìèå°ÑáÐèÕÈÅØ°½ÐèáÕØô°(ôì((±ÐÕÉÉ¹ÑeÈ°ÕÉÉ¹Ñ5½¹Ñ ì(±ÐÍ±ÑÑ-äô¹Õ±°ì(±ÐÍ±Ñ
-½±½ÈôÉ¸ì(±Ð¹½ÑÌôíôì(±Ð±½ÝÑôíôì(±Ð}ÍÙ9½ÑÍQ¥µÈô¹Õ±°ì(±Ð}ÍÙ±½ÝQ¥µÈô¹Õ±°ì((¼¨ôôôôôMe9MQQULôôôôô¨¼(Õ¹Ñ¥½¸ÍÑMå¹MÑÑÕÌ¡ÍÑÑ°ÑáÐ¤ì(½¹ÍÐ°ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% Íå¹MÑÑÕÌ¤ì(°¹±ÍÍ9µôÍÑÑì(°¹ÑáÑ
-½¹Ñ¹ÐôÑáÐì(ô((¼¨ôôôôô%IMQ=IMY¡½Õ¹¤ôôôôô¨¼(Õ¹Ñ¥½¸ÍÙQ½MÑ½É ¤ì(ÍÑMå¹MÑÑÕÌ ÍÙ¥¹°Â~JøââÏââÇââkâÇâgâ_âÛâ¸¸¸¤ì(±ÉQ¥µ½ÕÐ¡}ÍÙ9½ÑÍQ¥µÈ¤ì(}ÍÙ9½ÑÍQ¥µÈôÍÑQ¥µ½ÕÐ  ¤ôøì(¹½±±Ñ¥½¸ Í¥¹Õ½´¤¹½ ¹½ÑÌ¤¹ÍÐ¡ìÑè¹½ÑÌô¤(¹Ñ¡¸  ¤ôøÍÑMå¹MÑÑÕÌ ÍÙ°b¾â<âkâÇâgâ_âÛâæâæ'â¤¤(¹Ñ ¡ôøìÍÑMå¹MÑÑÕÌ ÉÉ½È°v0âkâÇâgâ_âÛâæâæ#æâSæ$¤ì½¹Í½±¹ÉÉ½È¡¤ìô¤ì(ô°ØÀÀ¤ì(ô((Õ¹Ñ¥½¸ÍÙ±½ÝÑ ¤ì(±ÉQ¥µ½ÕÐ¡}ÍÙ±½ÝQ¥µÈ¤ì(}ÍÙ±½ÝQ¥µÈôÍÑQ¥µ½ÕÐ  ¤ôøì(¹½±±Ñ¥½¸ Í¥¹Õ½´¤¹½ ±½Ü¤¹ÍÐ¡ìÑè±½ÝÑô¤(¹Ñ ¡ôø½¹Í½±¹ÉÉ½È ÍÙ±½ÜÉÉ½È°¤¤ì(ô°ØÀÀ¤ì(ô((Õ¹Ñ¥½¸ÑÑ-ä¡ä°´°¤ì(ÉÑÕÉ¸íåô´íMÑÉ¥¹¡´¬Ä¤¹ÁMÑÉÐ È°À¥ô´íMÑÉ¥¹¡¤¹ÁMÑÉÐ È°À¥õì(ô(Õ¹Ñ¥½¸Ñ¡¥eÈ¡ä¤ìÉÑÕÉ¸ä¬ÔÐÌìô((¼¨ôôôôôI9H
-19Hôôôôô¨¼(Õ¹Ñ¥½¸É¹É
-±¹È ¤ì(½¹ÍÐÑ½äô¹ÜÑ ¤ì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% µ½¹Ñ¡1°¤¹ÑáÑ
-½¹Ñ¹ÐôíQ!%}5=9Q!MmÕÉÉ¹Ñ5½¹Ñ¡uôíÑ¡¥eÈ¡ÕÉÉ¹ÑeÈ¥õì(½¹ÍÐ½äô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¹É	½ä¤ì(½ä¹¥¹¹É!Q50ôì(½¹ÍÐ¥ÉÍÑäô¹ÜÑ¡ÕÉÉ¹ÑeÈ°ÕÉÉ¹Ñ5½¹Ñ °Ä¤¹Ñä ¤ì(½¹ÍÐåÍ%¹5½¹Ñ ô¹ÜÑ¡ÕÉÉ¹ÑeÈ°ÕÉÉ¹Ñ5½¹Ñ ¬Ä°À¤¹ÑÑ ¤ì(½¹ÍÐåÍ%¹AÉØô¹ÜÑ¡ÕÉÉ¹ÑeÈ°ÕÉÉ¹Ñ5½¹Ñ °À¤¹ÑÑ ¤ì(±Ð±±Ìômtì(½È¡±Ð¤ô¥ÉÍÑä´Äì¤øôÀì¤´´¤±±Ì¹ÁÕÍ ¡ìäèåÍ%¹AÉØ´¤°µ½¹Ñ èÕÉÉ¹Ñ5½¹Ñ ´Ä°åÈèÕÉÉ¹Ñ5½¹Ñ ôôôÀüÕÉÉ¹ÑeÈ´ÄèÕÉÉ¹ÑeÈ°½Ñ¡ÈèÑÉÕô¤ì(½È¡±ÐôÄìðôåÍ%¹5½¹Ñ ì¬¬¤±±Ì¹ÁÕÍ ¡ìäè°µ½¹Ñ èÕÉÉ¹Ñ5½¹Ñ °åÈèÕÉÉ¹ÑeÈ°½Ñ¡Èè±Íô¤ì(±ÐÉµ¥¹¥¹ôÐÈ´±±Ì¹±¹Ñ ì(½È¡±ÐôÄìðôÉµ¥¹¥¹ì¬¬¤±±Ì¹ÁÕÍ ¡ìäè°µ½¹Ñ èÕÉÉ¹Ñ5½¹Ñ ¬Ä°åÈèÕÉÉ¹Ñ5½¹Ñ ôôôÄÄüÕÉÉ¹ÑeÈ¬ÄèÕÉÉ¹ÑeÈ°½Ñ¡ÈèÑÉÕô¤ì((±±Ì¹½É ¡±°ôøì(½¹ÍÐ¥Øô½Õµ¹Ð¹ÉÑ±µ¹Ð ¥Ø¤ì(¥Ø¹±ÍÍ9µô±¹Èµ±°¬¡±°¹½Ñ¡Èü½Ñ¡Èµµ½¹Ñ è¤ì(½¹ÍÐ¥ÍQ½äô±°¹½Ñ¡È±°¹äôôôÑ½ä¹ÑÑ ¤±°¹µ½¹Ñ ôôôÑ½ä¹Ñ5½¹Ñ  ¤±°¹åÈôôôÑ½ä¹ÑÕ±±eÈ ¤ì(¥¡¥ÍQ½ä¤¥Ø¹±ÍÍ1¥ÍÐ¹ Ñ½ä¤ì(½¹ÍÐ­äôÑÑ-ä¡±°¹åÈ°±°¹µ½¹Ñ °±°¹ä¤ì(½¹ÍÐå9½ÑÌô¹½ÑÍm­åtñðmtì(½¹ÍÐåMÁ¸ô½Õµ¹Ð¹ÉÑ±µ¹Ð ¥Ø¤ì(åMÁ¸¹±ÍÍ9µô±°µä¬¡¥ÍQ½äüÑ½äµè¤ì(åMÁ¸¹ÑáÑ
-½¹Ñ¹Ðô±°¹äì(¥Ø¹ÁÁ¹
-¡¥±¡åMÁ¸¤ì(½¹ÍÐÍ½ÉÑôl¸¸¹å9½ÑÍt¹Í½ÉÐ ¡°¤ôø¡¹Ñ¥µñð¤¹±½±
-½µÁÉ¡¹Ñ¥µñð¤¤ì(Í½ÉÑ¹Í±¥ À°Ì¤¹½É ¡¹½Ñôøì(½¹ÍÐô
-=1=IMm¹½Ñ¹½±½Étñð
-=1=IL¹É¸ì(½¹ÍÐ¥Ñ´ô½Õµ¹Ð¹ÉÑ±µ¹Ð ¥Ø¤ì(¥Ñ´¹±ÍÍ9µô¹½Ñµ¥Ñ´ì(¥Ñ´¹ÍÑå±¹­É½Õ¹ô¹ì(¥Ñ´¹ÍÑå±¹½±½Èô¹ÑáÐì(½¹ÍÐÑ¥µ!Ñµ°ô¹½Ñ¹Ñ¥µüñÍÁ¸±ÍÌô¹½ÑµÑ¥µµøíÍ!Ñµ°¡¹½Ñ¹Ñ¥µ¥ôð½ÍÁ¸ùèì(¥Ñ´¹¥¹¹É!Q50ôñ¥Ø±ÍÌô¹½Ñµ½ÐÍÑå±ô­É½Õ¹èí¹½Ñôøð½¥ØøñÍÁ¸±ÍÌô¹½ÑµÑáÐøíÍ!Ñµ°¡¹½Ñ¹ÑáÐ¥ôð½ÍÁ¸øíÑ¥µ!Ñµ±õì(¥Ø¹ÁÁ¹
-¡¥±¡¥Ñ´¤ì(ô¤ì(¥¡å9½ÑÌ¹±¹Ñ øÌ¤ì(½¹ÍÐµ½Éô½Õµ¹Ð¹ÉÑ±µ¹Ð ¥Ø¤ì(µ½É¹±ÍÍ9µô¹½Ñµµ½Éì(µ½É¹ÑáÑ
-½¹Ñ¹Ðô¬íå9½ÑÌ¹±¹Ñ ´ÍôââËâââËâì(¥Ø¹ÁÁ¹
-¡¥±¡µ½É¤ì(ô(¥Ø¹Ù¹Ñ1¥ÍÑ¹È ±¥¬° ¤ôø½Á¹5½°¡±°¹åÈ°±°¹µ½¹Ñ °±°¹ä¤¤ì(½ä¹ÁÁ¹
-¡¥±¡¥Ø¤ì(ô¤ì(ô((¼¨ôôôôô5=0ôôôôô¨¼(Õ¹Ñ¥½¸½Á¹5½°¡ä°´°¤ì(Í±ÑÑ-äôÑÑ-ä¡ä°´°¤ì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% µ½±Ñ1°¤¹ÑáÑ
-½¹Ñ¹ÐôÂ~N¬íôíQ!%}5=9Q!MmµuôíÑ¡¥eÈ¡ä¥õì(É¹É5½±9½ÑÌ ¤ì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹½Ñ%¹ÁÕÐ¤¹Ù±Õôì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% µ½±=ÙÉ±ä¤¹±ÍÍ1¥ÍÐ¹ ½Á¸¤ì(ÍÑQ¥µ½ÕÐ  ¤ôø½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹½Ñ%¹ÁÕÐ¤¹½ÕÌ ¤°ÈÀÀ¤ì(ô((Õ¹Ñ¥½¸É¹É5½±9½ÑÌ ¤ì(½¹ÍÐ±¥ÍÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% µ½±9½ÑÍ1¥ÍÐ¤ì(½¹ÍÐå9½ÑÌô¹½ÑÍmÍ±ÑÑ-åtñðmtì(¥¡å9½ÑÌ¹±¹Ñ ôôôÀ¤ì±¥ÍÐ¹¥¹¹É!Q50ôñ¥Ø±ÍÌôµÁÑäµ¹½ÑÌûââÇâæâæ#ââ×æâgæ'âWæâgââÇâgâgâ×æ$ð½¥ØøìÉÑÕÉ¸ìô(±¥ÍÐ¹¥¹¹É!Q50ôì(½¹ÍÐÝ¥Ñ¡%àôå9½ÑÌ¹µÀ ¡¹½Ñ°¥à¤ôø¡ì¸¸¹¹½Ñ°}¥àè¥àô¤¤ì(Ý¥Ñ¡%à¹Í½ÉÐ ¡°¤ôø¡¹Ñ¥µñð¤¹±½±
-½µÁÉ¡¹Ñ¥µñð¤¤ì(Ý¥Ñ¡%à¹½É ¡¹½Ñôøì(½¹ÍÐô
-=1=IMm¹½Ñ¹½±½Étñð
-=1=IL¹É¸ì(½¹ÍÐÉ½Üô½Õµ¹Ð¹ÉÑ±µ¹Ð ¥Ø¤ì(É½Ü¹±ÍÍ9µô¹½ÑµÉ½Üì(½¹ÍÐÑ¥µ!Ñµ°ô¹½Ñ¹Ñ¥µüñÍÁ¸±ÍÌô¹½ÑµÉ½ÜµÑ¥µûÂ~V@íÍ!Ñµ°¡¹½Ñ¹Ñ¥µ¥ôð½ÍÁ¸ùèì(É½Ü¹¥¹¹É!Q50ô(ñ¥Ø±ÍÌô¹½ÑµÉ½Üµ½ÐÍÑå±ô­É½Õ¹èí¹½Ñôøð½¥Øø(ñ¥Ø±ÍÌô¹½ÑµÉ½ÜµÑáÐøíÍ!Ñµ°¡¹½Ñ¹ÑáÐ¥ôð½¥Øø(íÑ¥µ!Ñµ±ô(ñÕÑÑ½¸±ÍÌô¹½ÑµÉ½Üµ±ÑÑ¥Ñ±ôââh½¹±¥¬ô±Ñ9½Ñ í¹½Ñ¹}¥áô¤ûÂ~^Dð½ÕÑÑ½¸ø(ñÕÑÑ½¸±ÍÌô¹½ÑµÉ½Üµ½Ñ¼½¹±¥¬ô½Á¹9½ÑÑ¥° í¹½Ñ¹}¥áô¤ûæâæ'âËæâlZØð½ÕÑÑ½¸ø(ì(±¥ÍÐ¹ÁÁ¹
-¡¥±¡É½Ü¤ì(ô¤ì(ô((Õ¹Ñ¥½¸±Ñ9½Ñ¡¥à¤ì(¥ ¹½ÑÍmÍ±ÑÑ-åt¤ÉÑÕÉ¸ì(¹½ÑÍmÍ±ÑÑ-åt¹ÍÁ±¥¡¥à°Ä¤ì(¥¡¹½ÑÍmÍ±ÑÑ-åt¹±¹Ñ ôôôÀ¤±Ñ¹½ÑÍmÍ±ÑÑ-åtì(ÍÙQ½MÑ½É ¤ì(É¹É5½±9½ÑÌ ¤ì(É¹É
-±¹È ¤ì(ô((Õ¹Ñ¥½¸ÍÙ9½Ñ ¤ì(½¹ÍÐ¥¹ÁÕÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹½Ñ%¹ÁÕÐ¤ì(½¹ÍÐÑáÐô¥¹ÁÕÐ¹Ù±Õ¹ÑÉ¥´ ¤ì(¥ ÑáÐ¤ÉÑÕÉ¸ì(½¹ÍÐÑ¥µô½Õµ¹Ð¹Ñ±µ¹Ñ	å% Ñ¥µ%¹ÁÕÐ¤¹Ù±Õñðì(¥ ¹½ÑÍmÍ±ÑÑ-åt¤¹½ÑÍmÍ±ÑÑ-åtômtì(¹½ÑÍmÍ±ÑÑ-åt¹ÁÕÍ ¡ìÑáÐ°½±½ÈèÍ±Ñ
-½±½È°Ñ¥µô¤ì(ÍÙQ½MÑ½É ¤ì(¥¹ÁÕÐ¹Ù±Õôì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% Ñ¥µ%¹ÁÕÐ¤¹Ù±Õôì(É¹É5½±9½ÑÌ ¤ì(É¹É
-±¹È ¤ì(ô((¼¨ôôôôôi==4ôôôôô¨¼(±Ð±½Ýi½½´ôÄ¸Àì(Õ¹Ñ¥½¸é½½µ±½Ü¡±Ñ¤ì(±½Ýi½½´ô±ÑôôôÀüÄ¸Àè5Ñ ¹µ¥¸ È¸À°5Ñ ¹µà À¸Ì°±½Ýi½½´¬±Ñ¤¤ì(½¹ÍÐ¹ÙÌô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½Ý
-¹ÙÌ¤ì(¹ÙÌ¹ÍÑå±¹ÑÉ¹Í½É´ôÍ± í±½Ýi½½µô¥ì(¹ÙÌ¹ÍÑå±¹ÑÉ¹Í½Éµ=É¥¥¸ôÑ½À±Ðì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% é½½µ1°¤¹ÑáÑ
-½¹Ñ¹Ðô5Ñ ¹É½Õ¹¡±½Ýi½½´¨ÄÀÀ¤¬ì(ô((½Õµ¹Ð¹Ù¹Ñ1¥ÍÑ¹È =5
-½¹Ñ¹Ñ1½° ¤ôøì(½¹ÍÐÍÉ½±±Èô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½ÝMÉ½±°¤ì(ÍÉ½±±È¹Ù¹Ñ1¥ÍÑ¹È Ý¡°°¡¤ôøì¥¡¹ÑÉ±-äñð¹µÑ-ä¤ì¹ÁÉÙ¹ÑÕ±Ð ¤ìé½½µ±½Ü¡¹±ÑdðÀüÀ¸Äè´À¸Ä¤ìôô°ìÁÍÍ¥Ùè±Íô¤ì(±Ð¥ÍA¹¹¥¹ô±Í°Á¹MÑÉÑ`ôÀ°Á¹MÑÉÑdôÀ°ÍÉ½±±MÑÉÑ`ôÀ°ÍÉ½±±MÑÉÑdôÀì(ÍÉ½±±È¹Ù¹Ñ1¥ÍÑ¹È µ½ÕÍ½Ý¸°¡¤ôøì¥¡¹ÑÉÐ¹±½ÍÍÐ ¹±½Üµ¹½¤ñð¹ÑÉÐ¹±½ÍÍÐ ¹±½ÜµµÑ¸¤¤ÉÑÕÉ¸ì¥ÍA¹¹¥¹ôÑÉÕìÁ¹MÑÉÑ`ô¹±¥¹Ñ`ìÁ¹MÑÉÑdô¹±¥¹ÑdìÍÉ½±±MÑÉÑ`ôÍÉ½±±È¹ÍÉ½±±1ÐìÍÉ½±±MÑÉÑdôÍÉ½±±È¹ÍÉ½±±Q½ÀìÍÉ½±±È¹ÍÑå±¹ÕÉÍ½ÈôÉ¥¹ì¹ÁÉÙ¹ÑÕ±Ð ¤ìô¤ì(½Õµ¹Ð¹Ù¹Ñ1¥ÍÑ¹È µ½ÕÍµ½Ù°¡¤ôøì¥ ¥ÍA¹¹¥¹¤ÉÑÕÉ¸ìÍÉ½±±È¹ÍÉ½±±1ÐôÍÉ½±±MÑÉÑ`´¡¹±¥¹Ñ`´Á¹MÑÉÑ`¤ìÍÉ½±±È¹ÍÉ½±±Q½ÀôÍÉ½±±MÑÉÑd´¡¹±¥¹Ñd´Á¹MÑÉÑd¤ìô¤ì(½Õµ¹Ð¹Ù¹Ñ1¥ÍÑ¹È µ½ÕÍÕÀ° ¤ôøì¥ ¥ÍA¹¹¥¹¤ÉÑÕÉ¸ì¥ÍA¹¹¥¹ô±ÍìÍÉ½±±È¹ÍÑå±¹ÕÉÍ½ÈôÉìô¤ì(ÍÉ½±±È¹ÍÑå±¹ÕÉÍ½ÈôÉì(ô¤ì((¼¨ôôôôô1=\
-!IPôôôôô¨¼(±ÐÕÉÉ¹Ñ±½Ý-äô¹Õ±°ì(±Ð±½Ý9ÙMÑ¬ômtì((Õ¹Ñ¥½¸Ñ±½Ý-ä¡Ñ-ä°¹½Ñ%à¤ìÉÑÕÉ¸íÑ-åõ}|í¹½Ñ%áõìô((Õ¹Ñ¥½¸¥¹¥Ñ±½Ý%9¡­ä°É½½ÑQ¥Ñ±¤ì(¥ ±½ÝÑm­åt¤ì(½¹ÍÐÉ½½Ñ%ô¹|¬Ñ¹¹½Ü ¤ì(±½ÝÑm­åtôìÉ½½Ñ%°¹½ÌèìmÉ½½Ñ%tèìÑ¥Ñ±èÉ½½ÑQ¥Ñ±°µµ¼è°É¥¡Ñ%è¹Õ±°°½Ý¹%è¹Õ±°ôôôì(ÍÙ±½ÝÑ ¤ì(ô(ô((Õ¹Ñ¥½¸½Á¹9½ÑÑ¥°¡¥à¤ì(½¹ÍÐ¹½Ñô¹½ÑÍmÍ±ÑÑ-åum¥átì(¥ ¹½Ñ¤ÉÑÕÉ¸ì(±½Ý9ÙMÑ¬ômtì(ÕÉÉ¹Ñ±½Ý-äôÑ±½Ý-ä¡Í±ÑÑ-ä°¥à¤ì(¥¹¥Ñ±½Ý%9¡ÕÉÉ¹Ñ±½Ý-ä°¹½Ñ¹ÑáÐ¤ì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½ÝÑ1°¤¹ÑáÑ
-½¹Ñ¹Ðô½Õµ¹Ð¹Ñ±µ¹Ñ	å% µ½±Ñ1°¤¹ÑáÑ
-½¹Ñ¹Ð¹ÉÁ± Â~N°¤ì(½¹ÍÐ½ÙÉ±äô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½Ý=ÙÉ±ä¤ì(½¹ÍÐÁ¹°ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½ÝA¹°¤ì(½ÙÉ±ä¹ÍÑå±¹½Á¥ÑäôÄì½ÙÉ±ä¹ÍÑå±¹Á½¥¹ÑÉÙ¹ÑÌô±°ì(Á¹°¹ÍÑå±¹ÑÉ¹Í½É´ôÑÉ¹Í±Ñd À¤ì(é½½µ±½Ü À¤ìÉ¹É±½Ü ¤ì(ô((Õ¹Ñ¥½¸±½Ý9Ù	¬ ¤ì±½Í±½Ü ¤ìô(Õ¹Ñ¥½¸±½Í±½Ü ¤ì(½¹ÍÐ½ÙÉ±äô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½Ý=ÙÉ±ä¤ì(½¹ÍÐÁ¹°ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½ÝA¹°¤ì(½ÙÉ±ä¹ÍÑå±¹½Á¥ÑäôÀì½ÙÉ±ä¹ÍÑå±¹Á½¥¹ÑÉÙ¹ÑÌô¹½¹ì(Á¹°¹ÍÑå±¹ÑÉ¹Í½É´ôÑÉ¹Í±Ñd ÈÁÁà¤ì(ô((Ý¥¹½Ü¹}¹½%µÌôíôì((Õ¹Ñ¥½¸Ñ9½QåÁ¡¹½¤ì(¥¡¹½¹¹½QåÁ¹½¹¹½QåÁôôÕÑ¼¤ÉÑÕÉ¸¹½¹¹½QåÁì(½¹ÍÐÐô¡¹½¹Ñ¥Ñ±ñð¤¹Ñ½1½ÝÉ
-Í ¤ì(¥ ¿æâæ!ñµ¥áÈ¼¹ÑÍÐ¡Ð¤¤ÉÑÕÉ¸µ¥áÈì(¥ ½Í±ÕµÁóâ«ââÇâ¼¹ÑÍÐ¡Ð¤¤ÉÑÕÉ¸Í±ÕµÀì(¥ ¿ââçââoâçâd¼¹ÑÍÐ¡Ð¤¤ÉÑÕÉ¸ÍÁ¥µ¸ì(¥ ¿æâ_â©ñÑÍÑóâ_âSâ«â·âiñ­Í¼¹ÑÍÐ¡Ð¤¤ÉÑÕÉ¸ÑÍÐì(ÉÑÕÉ¸Õ±Ðì(ô((½¹ÍÐ9=}QeA}5Qôì(µ¥áÈèì±Ìè±½Üµ¹½µµ¥áÈ°èµµ¥áÈ°±°èÂ~>´æâæ#âsâ«âô°(Í±ÕµÀèì±Ìè±½Üµ¹½µÍ±ÕµÀ°èµÍ±ÕµÀ°±°èÂ~N<M±ÕµÀô°(ÍÁ¥µ¸èì±Ìè±½Üµ¹½µÍÁ¥µ¸°èµÍÁ¥µ¸°±°èÂ~Äââçââoâçâdô°(ÑÍÐèì±Ìè±½Üµ¹½µÑÍÐ°èµÑÍÐ°±°èrâsââ_âSâ«â·âhô°(Õ±Ðèì±Ìè°èµÕ±Ð°±°èô°(ôì((Õ¹Ñ¥½¸áÑÉÑ-Í¡¹½¤ì(½¹ÍÐÍÉôm¹½¹Ñ¥Ñ±°¹½¹Ñ¥°°¹½¹µµ½t¹©½¥¸ ¤ì(½¹ÍÐ´ôÍÉ¹µÑ  ¼¡q¬¥qÌ©­Í½¤¤ì(ÉÑÕÉ¸´üµlÅt¬­Íè¹Õ±°ì(ô((Õ¹Ñ¥½¸É¹É±½Ü ¤ì(½¹ÍÐ±½Üô±½ÝÑmÕÉÉ¹Ñ±½Ý-åtì(¥ ±½Ü¤ÉÑÕÉ¸ì(½¹ÍÐ9=}\ôÄäÀ°I=]}@ôàÀ°
-=1}@ôÄÀÀ°AôÐÀì(½¹ÍÐMQA}`ô9=}\¬
-=1}@ì(Õ¹Ñ¥½¸¹½ ¡¹½¤ì½¹ÍÐ¡Í%µÌô¡¹½¹¥µÌü¹±¹Ñ ñðÀ¤øÀñð¹½¹¥µì±Ð ôÜÀì¥¡¹½¹Ñ¥µ¤ ¬ôÈÈì¥¡¡Í%µÌ¤ ¬ôäÀì¥¡¹½¹Ñ¥°¤ ¬ôÈÀì¥¡¹½¹µµ¼¤ ¬ôÄàì¥ ¹½¹µµ¼¹½¹Ñ¥µ¹½¹Ñ¥°¡Í%µÌ¤ ¬ôÄØìÉÑÕÉ¸ ìô(½¹ÍÐ½±5Àôíôì(Õ¹Ñ¥½¸ÍÍ¥¹
-½°¡¥°½°¤ì¥ ¥ñð±½Ü¹¹½Ím¥tñð½±5Ám¥tôôÕ¹¥¹¤ÉÑÕÉ¸ì½±5Ám¥tô½°ìÍÍ¥¹
-½°¡±½Ü¹¹½Ím¥t¹É¥¡Ñ%°½°¬Ä¤ìÍÍ¥¹
-½°¡±½Ü¹¹½Ím¥t¹½Ý¹%°½°¤ìô(ÍÍ¥¹
-½°¡±½Ü¹É½½Ñ%°À¤ì(½¹ÍÐÁ¥ádôíô°½±	½ÑÑ½´ôíôì(½¹ÍÐÉ¥¡ÑAÉ¹Ñ=ôíô°½Ý¹AÉ¹Ñ=ôíôì(=©Ð¹­åÌ¡±½Ü¹¹½Ì¤¹½É ¡Á¥ôøì½¹ÍÐ¸ô±½Ü¹¹½ÍmÁ¥tì¥¡¸¹É¥¡Ñ%¤É¥¡ÑAÉ¹Ñ=m¸¹É¥¡Ñ%tôÁ¥ì¥¡¸¹½Ý¹%¤½Ý¹AÉ¹Ñ=m¸¹½Ý¹%tôÁ¥ìô¤ì(Õ¹Ñ¥½¸Á±9½¡¥¤ì¥ ¥ñð±½Ü¹¹½Ím¥tñðÁ¥áem¥tôôÕ¹¥¹¤ÉÑÕÉ¸ì½¹ÍÐ¹½ô±½Ü¹¹½Ím¥tì½¹ÍÐ½°ô½±5Ám¥tñðÀì½¹ÍÐ ô¹½ ¡¹½¤ì½¹ÍÐÉÀôÉ¥¡ÑAÉ¹Ñ=m¥tì½¹ÍÐÀô½Ý¹AÉ¹Ñ=m¥tì½¹ÍÐ½±±½½Èô½±	½ÑÑ½µm½±tôôÕ¹¥¹ü½±	½ÑÑ½µm½±t¬I=]}@èÀì±Ðäì¥ ÉÀÀ¤ìäôAìô±Í¥¡ÉÀ¤ìäô5Ñ ¹µà¡Á¥áemÉÁtüüA°½±±½½È¤ìô±Íì½¹ÍÐÁÉ¹Ñ	½ÑÑ½´ô¡Á¥áemÁtüüA¤¬¹½ ¡±½Ü¹¹½ÍmÁt¤ìäô5Ñ ¹µà¡ÁÉ¹Ñ	½ÑÑ½´¬I=]}@°½±±½½È¤ìôÁ¥áem¥tôäì½±	½ÑÑ½µm½±tô5Ñ ¹µà¡½±	½ÑÑ½µm½±tüüÀ°ä¬ ¤ìÁ±9½¡¹½¹É¥¡Ñ%¤ìÁ±9½¡¹½¹½Ý¹%¤ìô(Á±9½¡±½Ü¹É½½Ñ%¤ì(Õ¹Ñ¥½¸ÁÕÍ¡½Ý¹
-¡¥¸¡¥°±Ñ¤ì¥ ¥ñð±½Ü¹¹½Ím¥tñð±ÑðôÀ¤ÉÑÕÉ¸ìÁ¥áem¥t¬ô±Ñì½¹ÍÐ½°ô½±5Ám¥tì½±	½ÑÑ½µm½±tô5Ñ ¹µà¡½±	½ÑÑ½µm½±tüüÀ°Á¥áem¥t¬¹½ ¡±½Ü¹¹½Ím¥t¤¤ìÁÕÍ¡½Ý¹
-¡¥¸¡±½Ü¹¹½Ím¥t¹½Ý¹%°±Ñ¤ìô(±Ð±¥¹
-¡¹ôÑÉÕì(Ý¡¥±¡±¥¹
-¡¹¤ì±¥¹
-¡¹ô±Íì=©Ð¹­åÌ¡±½Ü¹¹½Ì¤¹½É ¡¥ôøì½¹ÍÐ¹½ô±½Ü¹¹½Ím¥tì¥ ¹½¹É¥¡Ñ%¤ÉÑÕÉ¸ì½¹ÍÐÁäôÁ¥áem¥t°äôÁ¥áem¹½¹É¥¡Ñ%tì¥¡ÁäôôôÕ¹¥¹ñðäôôôÕ¹¥¹¤ÉÑÕÉ¸ì¥¡äøÁä¤ìÁÕÍ¡½Ý¹
-¡¥¸¡¥°ä´Áä¤ì±¥¹
-¡¹ôÑÉÕìôô¤ìô(½¹ÍÐµá
-½°ô5Ñ ¹µà À°¸¸¹=©Ð¹­åÌ¡½±5À¤¹µÀ¡¥ôø½±5Ám¥t¤¤ì(½¹ÍÐµá	½ÑÑ½´ô5Ñ ¹µà À°¸¸¹=©Ð¹­åÌ¡Á¥ád¤¹µÀ¡¥ôøÁ¥áem¥t¬¹½ ¡±½Ü¹¹½Ím¥t¤¤¤ì(½¹ÍÐ\ô¡µá
-½°¬È¤¨MQA}`¬A¨Èì(½¹ÍÐ ôµá	½ÑÑ½´¬A¨Èì(½¹ÍÐ¹ÙÌô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½Ý
-¹ÙÌ¤ì(½¹ÍÐÍÙô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±½ÝMÙ¤ì(ÉÉä¹É½´¡¹ÙÌ¹¡¥±É¸¤¹½É ¡ôøì¥¡ôôÍÙ¤¹Éµ½Ù ¤ìô¤ì(ÍÙ¹¥¹¹É!Q50ôñÌøñµÉ­È¥ôÉÈµÉ­É]¥Ñ ôàµÉ­É!¥¡ÐôàÉ`ôØÉdôÌ½É¥¹ÐôÕÑ¼øñÁÑ ô4À°À0À°Ø0à°Ìè¥±°ôäÑÍà¼øð½µÉ­Èøð½Ìùì(¹ÙÌ¹ÍÑå±¹Ý¥Ñ ô\¬Áàì¹ÙÌ¹ÍÑå±¹¡¥¡Ðô ¬Áàì(ÍÙ¹ÍÑÑÑÉ¥ÕÑ Ý¥Ñ °\¤ìÍÙ¹ÍÑÑÑÉ¥ÕÑ ¡¥¡Ð° ¤ì(½¹ÍÐ¹`ô¥ôøA¬¡½±5Ám¥tñðÀ¤¨MQA}`ì(½¹ÍÐ¹dô¥ôøÁ¥áem¥tüüAì(=©Ð¹­åÌ¡±½Ü¹¹½Ì¤¹½É ¡¥ôøì½¹ÍÐ¹½ô±½Ü¹¹½Ím¥tì½¹ÍÐ ô¹½ ¡¹½¤ì½¹ÍÐ¹àô¹`¡¥¤°¹äô¹d¡¥¤ì½¹ÍÐàô¹à¬9=}\¼È°äô¹ä¬ ¼Èì¥¡¹½¹É¥¡Ñ%Á¥áem¹½¹É¥¡Ñ%tôôÕ¹¥¹¤ì½¹ÍÐÉ ô¹½ ¡±½Ü¹¹½Ím¹½¹É¥¡Ñ%t¤ì½¹ÍÐÑäô¹d¡¹½¹É¥¡Ñ%¤¬É ¼ÈìÉÉ½Ü¡ÍÙ°¹à¬9=}\°ä°¹`¡¹½¹É¥¡Ñ%¤°Ñä¤ìô¥¡¹½¹½Ý¹%Á¥áem¹½¹½Ý¹%tôôÕ¹¥¹¤ì½¹ÍÐÑàô¹`¡¹½¹½Ý¹%¤¬9=}\¼ÈìÉÉ½Ü¡ÍÙ°à°¹ä¬ °Ñà°¹d¡¹½¹½Ý¹%¤¤ìôô¤ì(=©Ð¹­åÌ¡±½Ü¹¹½Ì¤¹½É ¡¥ôøì(½¹ÍÐ¹½ô±½Ü¹¹½Ím¥tì(½¹ÍÐ¥ÍI½½Ðô¥ôôô±½Ü¹É½½Ñ%ì(½¹ÍÐ ô¹½ ¡¹½¤ì(½¹ÍÐàô¹`¡¥¤°äô¹d¡¥¤ì(½¹ÍÐ¹½QåÁô¥ÍI½½ÐüÉ½½ÐèÑ9½QåÁ¡¹½¤ì(½¹ÍÐÑåÁ5Ñô9=}QeA}5Qm¹½QåÁtñð9=}QeA}5Q¹Õ±Ðì(½¹ÍÐ­ÍY°ô¹½QåÁôôôÑÍÐüáÑÉÑ-Í¡¹½¤è¹Õ±°ì(½¹ÍÐÉô½Õµ¹Ð¹ÉÑ±µ¹Ð ¥Ø¤ì(É¹±ÍÍ9µô±½Üµ¹½¬¡¥ÍI½½Ðü±½Üµ¹½µÉ½½Ðè¡ÑåÁ5Ñ¹±Ìü¬ÑåÁ5Ñ¹±Ìè¤¤ì(É¹ÍÑå±¹±Ðôà¬ÁàìÉ¹ÍÑå±¹Ñ½Àôä¬Áàì(½¹ÍÐ¡ÍÑ¥°ô¹½¹µµ¼ñð¹½¹Ñ¥µñð¹½¹Ñ¥°ñð¹½¹¥µñð¹½¹¥µÌü¹±¹Ñ ì(É¹¥¹¹É!Q50ô(íÑåÁ5Ñ¹±°üñ¥Ø±ÍÌô±½Üµ¹½µÑåÁµíÑåÁ5Ñ¹ôøíÑåÁ5Ñ¹±±ôð½¥Øùèô(ñ¥Ø±ÍÌô±½Üµ¹½µ¡Èø(ñÍÁ¸±ÍÌô±½Üµ¹½µÑ¥Ñ±øíÍ!Ñµ°¡¹½¹Ñ¥Ñ±¥ôð½ÍÁ¸ø(ì¥ÍI½½ÐüñÕÑÑ½¸±ÍÌô±½Üµ¹½µ°Ñ¥Ñ±ôââh½¹±¥¬ôÙ¹Ð¹ÍÑ½ÁAÉ½ÁÑ¥½¸ ¤í±Ñ±½Ý9½ í¥ô¤ûrTð½ÕÑÑ½¸ùèô(ð½¥Øø(í¹½¹Ñ¥µüñ¥Ø±ÍÌô±½Üµ¹½µÑûÂ~V@íÍ!Ñµ°¡¹½¹Ñ¥µ¥ôð½¥Øùèô(í­ÍY°üñ¥Ø±ÍÌô±½Üµ¹½µ­ÍøíÍ!Ñµ°¡­ÍY°¥ôð½¥Øùèô(ì  ¤ôøì½¹ÍÐ¥µÌô¹½¹¥µÌü¹±¹Ñ ü¹½¹¥µÌè¡¹½¹¥µüm¹½¹¥µtèmt¤ì¥ ¥µÌ¹±¹Ñ ¤ÉÑÕÉ¸ìÝ¥¹½Ü¹}¹½%µÍm¥tô¥µÌì½¹ÍÐáÑÉô¥µÌ¹±¹Ñ ´Äì½¹ÍÐôáÑÉøÀüñ¥Ø½¹±¥¬ôÙ¹Ð¹ÍÑ½ÁAÉ½ÁÑ¥½¸ ¤í½Á¹1¥¡Ñ½à¡Ý¥¹½Ü¹}¹½%µÍlí¥ôt°Ä¤ÍÑå±ôÁ½Í¥Ñ¥½¸éÍ½±ÕÑíÑ½ÀèÙÁàíÉ¥¡ÐèÙÁàí­É½Õ¹éÉ À°À°À°À¸ØÈ¤í½±½ÈéÝ¡¥Ñí½ÉÈµÉ¥ÕÌèÈÁÁàíÁ¥¹èÉÁàáÁàí½¹ÐµÍ¥éèÄÅÁàí½¹ÐµÝ¥¡ÐèÜÀÀíÕÉÍ½ÈéÁ½¥¹ÑÈìø¬íáÑÉôð½¥ØùèìÉÑÕÉ¸ñ¥ØÍÑå±ôÁ½Í¥Ñ¥½¸éÉ±Ñ¥ÙíµÉ¥¸èÕÁàÀìøñ¥µÍÉôí¥µÍlÁuô½¹±¥¬ôÙ¹Ð¹ÍÑ½ÁAÉ½ÁÑ¥½¸ ¤í½Á¹1¥¡Ñ½à¡Ý¥¹½Ü¹}¹½%µÍlí¥ôt°À¤ÍÑå±ôÝ¥Ñ èÄÀÀí½ÉÈµÉ¥ÕÌèÙÁàí½©Ðµ¥Ðé½ÙÈíµàµ¡¥¡ÐèàÁÁàí¥ÍÁ±äé±½¬íÕÉÍ½Èéé½½´µ¥¸ì¼øíôð½¥Øùìô¤ ¥ô(í¹½¹Ñ¥°üñ¥Ø±ÍÌô±½Üµ¹½µÁÉÙ¥ÜøíÍ!Ñµ°¡¹½¹Ñ¥°¹ÍÕÍÑÉ¥¹ À°ÔÔ¤¥ôí¹½¹Ñ¥°¹±¹Ñ øÔÔüèôð½¥Øùèô(í¹½¹µµ¼üñ¥Ø±ÍÌô±½Üµ¹½µÁÉÙ¥ÜÍÑå±ô½±½ÈèäÑÍàí½¹ÐµÍ¥éèÄÅÁàìøíÍ!Ñµ°¡¹½¹µµ¼¥ôð½¥Øùèô(ì¡ÍÑ¥°üñ¥Ø±ÍÌô±½Üµ¹½µ¡¥¹ÐûæâWâÃæâ{âßæ#â·æâ{âÓæ#âââËâââÃæâ·â×ââPð½¥Øùèô(ñ¥Ø±ÍÌô±½Üµ¹½µ½½ÑÈø(ñÕÑÑ½¸±ÍÌô±½Üµ¹½µ¥ÐµÑ¸½¹±¥¬ôÙ¹Ð¹ÍÑ½ÁAÉ½ÁÑ¥½¸ ¤í½Á¹9½¥Ð í¥ô¤ûr?¾â<æâæ'æâð½ÕÑÑ½¸ø(ð½¥Øø(ì(¹ÙÌ¹ÁÁ¹
-¡¥±¡É¤ì(¥ ¹½¹É¥¡Ñ%¤ì½¹ÍÐÑ¸ô½Õµ¹Ð¹ÉÑ±µ¹Ð ÕÑÑ½¸¤ìÑ¸¹±ÍÍ9µô±½ÜµµÑ¸ìÑ¸¹Ñ¥Ñ±ôæâ{âÓæ#ââ_âËââââÈìÑ¸¹ÑáÑ
-½¹Ñ¹Ðô¯HìÑ¸¹ÍÑå±¹±Ðô¡à¬9=}\¬¡
-=1}@´ÌÐ¤¼È¤¬ÁàìÑ¸¹ÍÑå±¹Ñ½Àô¡ä¬ ¼È´ÄÜ¤¬ÁàìÑ¸¹½¹±¥¬ô ¤ôø±½Ý9½¡¥°É¥¡Ð¤ì¹ÙÌ¹ÁÁ¹
-¡¥±¡Ñ¸¤ìô(¥ ¹½¹½Ý¹%¤ì½¹ÍÐÑ¸ô½Õµ¹Ð¹ÉÑ±µ¹Ð ÕÑÑ½¸¤ìÑ¸¹±ÍÍ9µô±½ÜµµÑ¸ìÑ¸¹Ñ¥Ñ±ôæâ{âÓæ#ââSæ'âËâgâæ#âËâìÑ¸¹ÑáÑ
-½¹Ñ¹Ðô¯LìÑ¸¹ÍÑå±¹±Ðô¡à¬9=}\¼È´ÄÜ¤¬ÁàìÑ¸¹ÍÑå±¹Ñ½Àô¡ä¬ ¬¡I=]}@´ÌÐ¤¼È¤¬ÁàìÑ¸¹½¹±¥¬ô ¤ôø±½Ý9½¡¥°½Ý¸¤ì¹ÙÌ¹ÁÁ¹
-¡¥±¡Ñ¸¤ìô(ô¤ì(ô((Õ¹Ñ¥½¸ÉÉ½Ü¡ÍÙ°àÄ°äÄ°àÈ°äÈ¤ì½¹ÍÐ±¥¹ô½Õµ¹Ð¹ÉÑ±µ¹Ñ9L ¡ÑÑÀè¼½ÝÝÜ¹ÜÌ¹½É¼ÈÀÀÀ½ÍÙ°±¥¹¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ àÄ°àÄ¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ äÄ°äÄ¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ àÈ°àÈ¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ äÈ°äÈ¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ ÍÑÉ½­°äÑÍà¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ ÍÑÉ½­µÝ¥Ñ °Ä¸Ô¤ì±¥¹¹ÍÑÑÑÉ¥ÕÑ µÉ­Èµ¹°ÕÉ° ÉÈ¤¤ìÍÙ¹ÁÁ¹
-¡¥±¡±¥¹¤ìô((Õ¹Ñ¥½¸±½Ý9½¡ÁÉ¹Ñ%°¥È¤ì½¹ÍÐ±½Üô±½ÝÑmÕÉÉ¹Ñ±½Ý-åtì½¹ÍÐ¹Ý%ô¹|¬Ñ¹¹½Ü ¤ì±½Ü¹¹½Ím¹Ý%tôìÑ¥Ñ±èâ¯âÇââæ'â·æâ¯âæ °µµ¼è°É¥¡Ñ%è¹Õ±°°½Ý¹%è¹Õ±°ôì¥¡¥ÈôôôÉ¥¡Ð¤±½Ü¹¹½ÍmÁÉ¹Ñ%t¹É¥¡Ñ%ô¹Ý%ì±Í±½Ü¹¹½ÍmÁÉ¹Ñ%t¹½Ý¹%ô¹Ý%ìÍÙ±½ÝÑ ¤ìÉ¹É±½Ü ¤ìô(Õ¹Ñ¥½¸±Ñ±½Ý9½¡¥¤ì½¹ÍÐ±½Üô±½ÝÑmÕÉÉ¹Ñ±½Ý-åtì=©Ð¹Ù±ÕÌ¡±½Ü¹¹½Ì¤¹½É ¡¸ôøì¥¡¸¹É¥¡Ñ%ôôô¥¤¸¹É¥¡Ñ%ô¹Õ±°ì¥¡¸¹½Ý¹%ôôô¥¤¸¹½Ý¹%ô¹Õ±°ìô¤ì¡Õ¹Ñ¥½¸É´¡¹¥¤ì¥ ¹¥ñð±½Ü¹¹½Ím¹¥t¤ÉÑÕÉ¸ì½¹ÍÐ¸ô±½Ü¹¹½Ím¹¥tìÉ´¡¸¹É¥¡Ñ%¤ìÉ´¡¸¹½Ý¹%¤ì±Ñ±½Ü¹¹½Ím¹¥tìô¤¡¥¤ìÍÙ±½ÝÑ ¤ìÉ¹É±½Ü ¤ìô(Õ¹Ñ¥½¸ÕÁÑ±½ÝQ¥Ñ±¡¥°°¤ì±½ÝÑmÕÉÉ¹Ñ±½Ý-åt¹¹½Ím¥t¹Ñ¥Ñ±ô°¹ÑáÑ
-½¹Ñ¹Ð¹ÑÉ¥´ ¤ñð£æâæ#ââ×â+âßæ#â´¤ìÍÙ±½ÝÑ ¤ìô(Õ¹Ñ¥½¸ÕÁÑ±½Ý5µ¼¡¥°°¤ì±½ÝÑmÕÉÉ¹Ñ±½Ý-åt¹¹½Ím¥t¹µµ¼ô°¹ÑáÑ
-½¹Ñ¹Ð¹ÑÉ¥´ ¤ìÍÙ±½ÝÑ ¤ìô((¼¨ôôôôô1%!Q	=`ôôôôô¨¼(±Ð±%µÌômt°±%¹àôÀì(Õ¹Ñ¥½¸½Á¹1¥¡Ñ½à¡¥µÌ°¥à¤ì±%µÌôÉÉä¹¥ÍÉÉä¡¥µÌ¤ü¥µÌèm¥µÍtì±%¹àô¥àñðÀì}±M¡½Ü ¤ì½¹ÍÐ±ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¥¡Ñ½à¤ì±¹ÍÑå±¹½Á¥ÑäôÄì±¹ÍÑå±¹Á½¥¹ÑÉÙ¹ÑÌô±°ìÍÑQ¥µ½ÕÐ  ¤ôøì½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¥¡Ñ½á%µ¤¹ÍÑå±¹ÑÉ¹Í½É´ôÍ± Ä¤ìô°ÄÀ¤ìô(Õ¹Ñ¥½¸}±M¡½Ü ¤ì½¹ÍÐ¥µô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¥¡Ñ½á%µ¤ì½¹ÍÐÁÉØô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±AÉØ¤ì½¹ÍÐ¹áÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±9áÐ¤ì½¹ÍÐÑÈô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±
-½Õ¹ÑÈ¤ì¥µ¹ÍÉô±%µÍm±%¹átìÁÉØ¹ÍÑå±¹¥ÍÁ±äô±%µÌ¹±¹Ñ øÄü±àè¹½¹ì¹áÐ¹ÍÑå±¹¥ÍÁ±äô±%µÌ¹±¹Ñ øÄü±àè¹½¹ìÑÈ¹ÑáÑ
-½¹Ñ¹Ðô±%µÌ¹±¹Ñ øÄüí±%¹à¬Åô¼í±%µÌ¹±¹Ñ¡õèìô(Õ¹Ñ¥½¸±9Ø¡¥È¤ì±%¹àô¡±%¹à¬¥È¬±%µÌ¹±¹Ñ ¤±%µÌ¹±¹Ñ ì½¹ÍÐ¥µô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¥¡Ñ½á%µ¤ì¥µ¹ÍÑå±¹½Á¥ÑäôÀìÍÑQ¥µ½ÕÐ  ¤ôøì}±M¡½Ü ¤ì¥µ¹ÍÑå±¹½Á¥ÑäôÄìô°ÄÈÀ¤ìô(Õ¹Ñ¥½¸±½Í1¥¡Ñ½à ¤ì½¹ÍÐ±ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¥¡Ñ½à¤ì½¹ÍÐ¥µô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ±¥¡Ñ½á%µ¤ì¥µ¹ÍÑå±¹ÑÉ¹Í½É´ôÍ± À¸ä¤ì±¹ÍÑå±¹½Á¥ÑäôÀì±¹ÍÑå±¹Á½¥¹ÑÉÙ¹ÑÌô¹½¹ìô(½Õµ¹Ð¹Ù¹Ñ1¥ÍÑ¹È ­å½Ý¸°¡¤ôøì¥¡¹­äôôôÍÁ¤±½Í1¥¡Ñ½à ¤ì¥¡¹­äôôôÉÉ½ÝI¥¡Ð¤±9Ø Ä¤ì¥¡¹­äôôôÉÉ½Ý1Ð¤±9Ø ´Ä¤ìô¤ì((¼¨ôôôôô9=%Pôôôôô¨¼(±Ð¥Ñ¥¹9½%ô¹Õ±°°Á¹¥¹%µÌômt°Í±Ñ9½Q¥Ñ±ô¹Õ±°ì((Õ¹Ñ¥½¸Á¥­9½Q¥Ñ±¡Ñ¸¤ì(½Õµ¹Ð¹ÅÕÉåM±Ñ½É±° ¹Q¥Ñ±A¥­ÈÕÑÑ½¸¤¹½É ¡ôøì¹ÍÑå±¹½ÕÑ±¥¹ô¹½¹ì¹ÍÑå±¹½¹Ñ]¥¡Ðô¹½Éµ°ìô¤ì(Ñ¸¹ÍÑå±¹½ÕÑ±¥¹ôÉÁàÍ½±¥ÅÍÙìÑ¸¹ÍÑå±¹½¹Ñ]¥¡ÐôÜÀÀì(Í±Ñ9½Q¥Ñ±ôÑ¸¹ÑÍÐ¹Ñ¥Ñ±ì(½¹ÍÐÕÍÑ½µ%¹ÁÕÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±¤ì(½¹ÍÐ¹ÕµÉI½Üô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±9ÕµÉI½Ü¤ì(½¹ÍÐ¹Õµ%¹ÁÕÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±9ÕµÈ¤ì(¥¡Ñ¸¹ÑÍÐ¹Ñ¥Ñ±ôôôÕÍÑ½´¤ìÕÍÑ½µ%¹ÁÕÐ¹ÍÑå±¹¥ÍÁ±äô±½¬ì¹ÕµÉI½Ü¹ÍÑå±¹¥ÍÁ±äô¹½¹ìÕÍÑ½µ%¹ÁÕÐ¹½ÕÌ ¤ìô(±ÍìÕÍÑ½µ%¹ÁÕÐ¹ÍÑå±¹¥ÍÁ±äô¹½¹ì¹ÕµÉI½Ü¹ÍÑå±¹¥ÍÁ±äô±àì¹Õµ%¹ÁÕÐ¹Ù±ÕôìÕÁÑQ¥Ñ±AÉÙ¥Ü ¤ì¹Õµ%¹ÁÕÐ¹½ÕÌ ¤ìô(ô((Õ¹Ñ¥½¸ÕÁÑQ¥Ñ±AÉÙ¥Ü ¤ì½¹ÍÐ¹Õ´ô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±9ÕµÈ¤¹Ù±Õ¹ÑÉ¥´ ¤ì½¹ÍÐÍôÍ±Ñ9½Q¥Ñ±Í±Ñ9½Q¥Ñ±ôôÕÍÑ½´üÍ±Ñ9½Q¥Ñ±èì½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±AÉÙ¥Ü¤¹ÑáÑ
-½¹Ñ¹Ðô¹Õ´ü¡Í¬¹Õ´¤èÍìô((Õ¹Ñ¥½¸½Á¹9½¥Ð¡¥¤ì(½¹ÍÐ¹½ô±½ÝÑmÕÉÉ¹Ñ±½Ý-åt¹¹½Ím¥tì(¥ ¹½¤ÉÑÕÉ¸ì(¥Ñ¥¹9½%ô¥ì(¥¡¹½¹¥µ¹½¹¥µÌ¤¹½¹¥µÌôm¹½¹¥µtì(Á¹¥¹%µÌôl¸¸¸¡¹½¹¥µÌñðmt¥tì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥µ¤¹Ù±Õô¹½¹Ñ¥µñðì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹5µ¼¤¹Ù±Õô¹½¹µµ¼ñðì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Ñ¥°¤¹Ù±Õô¹½¹Ñ¥°ñðì(½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹%µ%¹ÁÕÐ¤¹Ù±Õôì(½¹ÍÐÑ¥Ñ±	Ñ¹Ìô½Õµ¹Ð¹ÅÕÉåM±Ñ½É±° ¹Q¥Ñ±A¥­ÈÕÑÑ½¸¤ì(±ÐÑ¥Ñ±5Ñ¡ô±Íì(Ñ¥Ñ±	Ñ¹Ì¹½É ¡ôøì¹ÍÑå±¹½ÕÑ±¥¹ô¹½¹ì¹ÍÑå±¹½¹Ñ]¥¡Ðô¹½Éµ°ì¥¡¹ÑÍÐ¹Ñ¥Ñ±ôôÕÍÑ½´¹ÑÍÐ¹Ñ¥Ñ±ôôô¹½¹Ñ¥Ñ±¤ì¹ÍÑå±¹½ÕÑ±¥¹ôÉÁàÍ½±¥ÅÍÙì¹ÍÑå±¹½¹Ñ]¥¡ÐôÜÀÀìÑ¥Ñ±5Ñ¡ôÑÉÕìÍ±Ñ9½Q¥Ñ±ô¹½¹Ñ¥Ñ±ìôô¤ì(½¹ÍÐÕÍÑ½µ%¹ÁÕÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±¤ì(½¹ÍÐ¹ÕµÉI½Üô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±9ÕµÉI½Ü¤ì(½¹ÍÐ¹Õµ%¹ÁÕÐô½Õµ¹Ð¹Ñ±µ¹Ñ	å% ¹Q¥Ñ±9ÕµÈ¤ì(¥ Ñ¥Ñ±5Ñ¡¤ìÑ¥Ñ±	Ñ¹Ì¹½É ¡ôøì¥¡¹ÑÍÐ¹Ñ¥Ñ±ôôôÕÍÑ½´¤ì¹ÍÑå±¹½ÕÑ±¥¹ôÉÁàÍ½±¥ÅÍÙì¹ÍÑå±¹½¹Ñ]¥¡ÐôÜÀÀìôô¤ìÕÍÑ½µ%¹ÁÕÐ¹ÍÑå±¹¥ÍÁ±äô±½¬ìÕÍÑ½µ%¹ÁÕÐ¹Ù±Õô¹½.title || ''; numberRow.style.display = 'none'; selectedNodeTitle = 'custom'; }
-    else { customInput.style.display = 'none'; customInput.value = ''; const base = selectedNodeTitle; const suffix = node.title.startsWith(base) ? node.title.slice(base.length) : ''; numInput.value = suffix; numberRow.style.display = 'flex'; updateTitlePreview(); }
-    renderImageGrid();
-    const ov = document.getElementById('nodeEditOverlay');
-    const pn = document.getElementById('nodeEditPanel');
-    ov.style.opacity = '1'; ov.style.pointerEvents = 'all'; pn.style.transform = 'scale(1)';
-    setTimeout(() => { const t = document.getElementById('neTitle'); t.focus(); t.select(); }, 150);
+          <input id="neTitleNumber" type="number" placeholder="ใส่เลข..." min="1"
+            style="width:100px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;"
+            onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"
+            oninput="updateTitlePreview()"/>
+          <span style="font-size:12px;color:#9ca3af;">← ใส่หรือเว้นว่างได้</span>
+        </div>
+        <!-- Custom text input (for เพิ่มเติม) -->
+        <input id="neTitle" type="text" placeholder="พิมพ์หัวข้อใหม่..."
+          style="display:none;width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;margin-top:8px;"
+          onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+      </div>
+      <div id="neTypePicker" style="display:none;"></div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">🕐 เวลา</label>
+        <input id="neTime" type="time"
+          style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;"
+          onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">📄 รายละเอียด</label>
+        <textarea id="neDetail" placeholder="รายละเอียดเพิ่มเติม..." rows="4"
+          style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"
+          onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">📝 หมายเหตุ</label>
+        <input id="neMemo" type="text" placeholder="หมายเหตุสั้นๆ..."
+          style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;"
+          onfocus="this.style.borderColor='#1a3a6b'" onblur="this.style.borderColor='#d1d5db'"/>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">🖼️ รูปภาพ</label>
+        <!-- Grid of uploaded images -->
+        <div id="neImagesGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;"></div>
+        <!-- Upload button -->
+        <div onclick="document.getElementById('neImageInput').click()"
+          style="border:2px dashed #d1d5db;border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:border-color 0.2s;background:#fafafa;"
+          onmouseenter="this.style.borderColor='#3b82f6'" onmouseleave="this.style.borderColor='#d1d5db'">
+          <span style="color:#9ca3af;font-size:13px;">➕ เพิ่มรูปภาพ</span><br/>
+          <span style="font-size:11px;color:#d1d5db;">PNG, JPG, GIF (ไม่เกิน 50MB / รูป)</span>
+          <input id="neImageInput" type="file" accept="image/*" multiple style="display:none;" onchange="handleImageUpload(event)"/>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0 20px 20px;display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeNodeEdit()" style="background:white;border:1px solid #d1d5db;border-radius:8px;padding:9px 18px;font-size:14px;cursor:pointer;color:#374151;">ยกเลิก</button>
+      <button onclick="saveNodeEdit()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLOW OVERLAY (full screen) -->
+<div id="flowOverlay" style="
+  position:fixed;inset:0;background:rgba(0,0,0,0.55);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1100;opacity:0;pointer-events:none;transition:opacity 0.2s;">
+  <div id="flowPanel" style="
+    background:white;border-radius:14px;
+    width:min(95vw,1100px);height:min(90vh,700px);
+    display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 24px 80px rgba(0,0,0,0.25);
+    transform:translateY(20px);transition:transform 0.2s;">
+
+    <!-- Flow Header -->
+    <div style="background:linear-gradient(135deg,#1a3a6b,#1e4d8c);color:white;padding:14px 20px;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div id="flowDateLabel" style="font-size:16px;font-weight:700;"></div>
+        <div style="font-size:12px;opacity:0.7;margin-top:2px">ผลเหสปุน</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <!-- Zoom controls -->
+        <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,0.15);border-radius:8px;padding:3px 6px;">
+          <button onclick="zoomFlow(-0.1)" title="ซูมออก" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;width:28px;height:28px;line-height:1;border-radius:4px;transition:background 0.2s;"
+            onmouseenter="this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background='none'">−</button>
+          <span id="zoomLabel" style="color:white;font-size:12px;font-weight:600;min-width:36px;text-align:center;">100%</span>
+          <button onclick="zoomFlow(0.1)" title="ซูมเข้า" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;width:28px;height:28px;line-height:1;border-radius:4px;transition:background 0.2s;"
+            onmouseenter="this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background='none'">+</button>
+          <button onclick="zoomFlow(0)" title="รีเซ็ต" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:10px;cursor:pointer;padding:0 4px;border-radius:4px;transition:background 0.2s;"
+            onmouseenter="this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background='none'">↺</button>
+        </div>
+        <button onclick="closeFlow()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;opacity:0.8;line-height:1;">✕</button>
+      </div>
+    </div>
+
+    <!-- Back bar -->
+    <div style="background:#f1f5f9;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button onclick="flowNavBack()" style="background:#1a3a6b;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:13px;font-weight:600;cursor:pointer;">← กลับ</button>
+      <div id="flowBreadcrumb"></div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="flowScroll" style="flex:1;overflow:auto;position:relative;padding:30px;">
+      <div id="flowCanvas" style="position:relative;min-width:600px;min-height:400px;">
+        <svg id="flowSvg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===== STATE ===== */
+  const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const COLORS = {
+    green:  { bg: '#dcfce7', text: '#166534', dot: '#22c55e' },
+    blue:   { bg: '#dbeafe', text: '#1e40af', dot: '#3b82f6' },
+    yellow: { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
+    red:    { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' },
+    purple: { bg: '#ede9fe', text: '#5b21b6', dot: '#8b5cf6' },
+  };
+
+  let currentYear, currentMonth;
+  let selectedDateKey = null;
+  let selectedColor = 'green';
+
+  // Load notes from localStorage
+  let notes = JSON.parse(localStorage.getItem('calendarNotes') || '{}');
+
+  function saveToStorage() {
+    localStorage.setItem('calendarNotes', JSON.stringify(notes));
   }
 
-  function renderImageGrid() { const grid = document.getElementById('neImagesGrid'); grid.innerHTML = ''; pendingImages.forEach((src, i) => { const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f1f5f9;'; wrap.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="openLightbox(pendingImages, ${i})"/><button onclick="removePendingImage(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1;">â</button>`; grid.appendChild(wrap); }); grid.style.display = pendingImages.length ? 'grid' : 'none'; }
-  function removePendingImage(i) { pendingImages.splice(i, 1); renderImageGrid(); }
-  function handleImageUpload(event) { const files = Array.from(event.target.files); let loaded = 0; files.forEach(file => { if (file.size > 50 * 1024 * 1024) { alert(`${file.name} à¹à¸«à¸à¹à¹à¸à¸´à¸ 50MB`); return; } const reader = new FileReader(); reader.onload = (e) => { pendingImages.push(e.target.result); loaded++; if (loaded === files.length) renderImageGrid(); }; reader.readAsDataURL(file); }); event.target.value = ''; }
+  function getDateKey(y, m, d) {
+    return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+
+  function thaiYear(y) { return y + 543; }
+
+  /* ===== RENDER CALENDAR ===== */
+  function renderCalendar() {
+    const today = new Date();
+    const label = `${THAI_MONTHS[currentMonth]} ${thaiYear(currentYear)}`;
+    document.getElementById('monthLabel').textContent = label;
+
+    const body = document.getElementById('calendarBody');
+    body.innerHTML = '';
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
+
+    let cells = [];
+
+    // Prev month padding
+    for (let i = firstDay - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrev - i, month: currentMonth - 1, year: currentMonth === 0 ? currentYear - 1 : currentYear, other: true });
+    }
+    // Current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, month: currentMonth, year: currentYear, other: false });
+    }
+    // Next month padding
+    let remaining = 42 - cells.length;
+    for (let d = 1; d <= remaining; d++) {
+      cells.push({ day: d, month: currentMonth + 1, year: currentMonth === 11 ? currentYear + 1 : currentYear, other: true });
+    }
+
+    cells.forEach(cell => {
+      const div = document.createElement('div');
+      div.className = 'calendar-cell' + (cell.other ? ' other-month' : '');
+
+      const isToday = !cell.other &&
+        cell.day   === today.getDate() &&
+        cell.month === today.getMonth() &&
+        cell.year  === today.getFullYear();
+      if (isToday) div.classList.add('today');
+
+      const key = getDateKey(cell.year, cell.month, cell.day);
+      const dayNotes = notes[key] || [];
+
+      // Day number
+      const daySpan = document.createElement('div');
+      daySpan.className = 'cell-day' + (isToday ? ' today-badge' : '');
+      daySpan.textContent = cell.day;
+      div.appendChild(daySpan);
+
+      // Notes (max 3, then "+N more") — sorted by time
+      const sorted = [...dayNotes].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+      const shown = sorted.slice(0, 3);
+      shown.forEach(note => {
+        const c = COLORS[note.color] || COLORS.green;
+        const item = document.createElement('div');
+        item.className = 'note-item';
+        item.style.background = c.bg;
+        item.style.color = c.text;
+        const timeHtml = note.time
+          ? `<span class="note-time-badge">${escHtml(note.time)}</span>`
+          : '';
+        item.innerHTML = `<div class="note-dot" style="background:${c.dot}"></div><span class="note-text">${escHtml(note.text)}</span>${timeHtml}`;
+        item.title = note.time ? `${note.time} — ${note.text}` : note.text;
+        div.appendChild(item);
+      });
+      if (dayNotes.length > 3) {
+        const more = document.createElement('div');
+        more.className = 'note-more';
+        more.textContent = `+${dayNotes.length - 3} รายการ`;
+        div.appendChild(more);
+      }
+
+      div.addEventListener('click', () => openModal(cell.year, cell.month, cell.day));
+      body.appendChild(div);
+    });
+  }
+
+  /* ===== MODAL ===== */
+  function openModal(y, m, d) {
+    selectedDateKey = getDateKey(y, m, d);
+
+    const label = `${d} ${THAI_MONTHS[m]} ${thaiYear(y)}`;
+    document.getElementById('modalDateLabel').textContent = '📅 ' + label;
+
+    renderModalNotes();
+    document.getElementById('noteInput').value = '';
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('noteInput').focus(), 200);
+  }
+
+  function renderModalNotes() {
+    const list = document.getElementById('modalNotesList');
+    const dayNotes = notes[selectedDateKey] || [];
+
+    if (dayNotes.length === 0) {
+      list.innerHTML = '<div class="empty-notes">ยังไม่มีโน้ตในวันนี้</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    // Sort by time for display, keep original index for deletion
+    const withIdx = dayNotes.map((note, idx) => ({ ...note, _idx: idx }));
+    withIdx.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    withIdx.forEach((note) => {
+      const c = COLORS[note.color] || COLORS.green;
+      const row = document.createElement('div');
+      row.className = 'note-row';
+      const timeHtml = note.time
+        ? `<span class="note-row-time">🕐 ${escHtml(note.time)}</span>`
+        : '';
+      row.innerHTML = `
+        <div class="note-row-dot" style="background:${c.dot}"></div>
+        <div class="note-row-text">${escHtml(note.text)}</div>
+        ${timeHtml}
+        <button class="note-row-delete" title="ลบ" onclick="deleteNote(${note._idx})">🗑</button>
+        <button class="note-row-goto" onclick="openNoteDetail(${note._idx})">เข้าไป ▶</button>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function deleteNote(idx) {
+    if (!notes[selectedDateKey]) return;
+    notes[selectedDateKey].splice(idx, 1);
+    if (notes[selectedDateKey].length === 0) delete notes[selectedDateKey];
+    saveToStorage();
+    renderModalNotes();
+    renderCalendar();
+  }
+
+  function saveNote() {
+    const input = document.getElementById('noteInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const time = document.getElementById('timeInput').value || '';
+
+    if (!notes[selectedDateKey]) notes[selectedDateKey] = [];
+    notes[selectedDateKey].push({ text, color: selectedColor, time });
+    saveToStorage();
+
+    input.value = '';
+    document.getElementById('timeInput').value = '';
+    renderModalNotes();
+    renderCalendar();
+  }
+
+  /* ===== ZOOM ===== */
+  let flowZoom = 1.0;
+
+  function zoomFlow(delta) {
+    if (delta === 0) {
+      flowZoom = 1.0;
+    } else {
+      flowZoom = Math.min(2.0, Math.max(0.3, flowZoom + delta));
+    }
+    applyZoom();
+  }
+
+  function applyZoom() {
+    const canvas = document.getElementById('flowCanvas');
+    canvas.style.transform = `scale(${flowZoom})`;
+    canvas.style.transformOrigin = 'top left';
+    document.getElementById('zoomLabel').textContent = Math.round(flowZoom * 100) + '%';
+  }
+
+  // Scroll-wheel zoom + drag-to-pan on the flow panel
+  document.addEventListener('DOMContentLoaded', () => {
+    const scroller = document.getElementById('flowScroll');
+
+    // ── Zoom ──
+    scroller.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        zoomFlow(e.deltaY < 0 ? 0.1 : -0.1);
+      }
+    }, { passive: false });
+
+    // ── Drag-to-pan ──
+    let isPanning = false, panStartX = 0, panStartY = 0, scrollStartX = 0, scrollStartY = 0;
+
+    scroller.addEventListener('mousedown', (e) => {
+      // Only pan when clicking on background (not buttons/nodes)
+      if (e.target.closest('.flow-node') || e.target.closest('.flow-add-btn')) return;
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      scrollStartX = scroller.scrollLeft;
+      scrollStartY = scroller.scrollTop;
+      scroller.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      scroller.scrollLeft = scrollStartX - (e.clientX - panStartX);
+      scroller.scrollTop  = scrollStartY - (e.clientY - panStartY);
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isPanning) return;
+      isPanning = false;
+      scroller.style.cursor = 'grab';
+    });
+
+    scroller.style.cursor = 'grab';
+  });
+
+  /* ===== FLOW CHART ===== */
+  let flowData    = JSON.parse(localStorage.getItem('calendarFlow') || '{}');
+  let currentFlowKey = null;
+  let flowNavStack   = [];
+
+  function saveFlowData() {
+    localStorage.setItem('calendarFlow', JSON.stringify(flowData));
+  }
+
+  function getFlowKey(dateKey, noteIdx) {
+    return `${dateKey}__${noteIdx}`;
+  }
+
+  function initFlowIfNeeded(key, rootTitle) {
+    if (!flowData[key]) {
+      const rootId = 'n_' + Date.now();
+      flowData[key] = {
+        rootId,
+        nodes: { [rootId]: { title: rootTitle, memo: '', rightId: null, downId: null } }
+      };
+      saveFlowData();
+    }
+  }
+
+  function openNoteDetail(idx) {
+    const note = notes[selectedDateKey][idx];
+    if (!note) return;
+
+    flowNavStack = [];  // reset nav
+    currentFlowKey = getFlowKey(selectedDateKey, idx);
+    initFlowIfNeeded(currentFlowKey, note.text);
+
+    const dateLabel = document.getElementById('modalDateLabel').textContent.replace('📅 ', '');
+    document.getElementById('flowDateLabel').textContent = dateLabel;
+
+    const overlay = document.getElementById('flowOverlay');
+    const panel   = document.getElementById('flowPanel');
+    overlay.style.opacity = '1';
+    overlay.style.pointerEvents = 'all';
+    panel.style.transform = 'translateY(0)';
+
+    flowZoom = 1.0; applyZoom();
+    renderFlow();
+  }
+
+  function flowNavBack() {
+    closeFlow();
+  }
+
+  function closeFlow() {
+    const overlay = document.getElementById('flowOverlay');
+    const panel   = document.getElementById('flowPanel');
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
+    panel.style.transform = 'translateY(20px)';
+  }
+
+  // Global map: nodeId → images array (rebuilt each renderFlow)
+  window._nodeImgs = {};
+
+  /* ===== NODE TYPE DETECTION ===== */
+  function getNodeType(node) {
+    // Manual type always wins
+    if (node.nodeType && node.nodeType !== 'auto') return node.nodeType;
+    // Fall back to keyword detection on title
+    const t = (node.title || '').toLowerCase();
+    if (/โม่|mixer/.test(t))               return 'mixer';
+    if (/slump|สลัม/.test(t))              return 'slump';
+    if (/ลูกปูน/.test(t))                  return 'specimen';
+    if (/เทส|test|ทดสอบ|ksc/.test(t))     return 'test';
+    return 'default';
+  }
+
+  const NODE_TYPE_META = {
+    mixer:    { cls: 'flow-node-mixer',    badge: 'badge-mixer',    label: '🏭 โม่ผสม'    },
+    slump:    { cls: 'flow-node-slump',    badge: 'badge-slump',    label: '📏 Slump'      },
+    specimen: { cls: 'flow-node-specimen', badge: 'badge-specimen', label: '🧱 ลูกปูน'    },
+    test:     { cls: 'flow-node-test',     badge: 'badge-test',     label: '✅ ผลทดสอบ'   },
+    default:  { cls: '',                   badge: 'badge-default',  label: ''              },
+  };
+
+  /* Extract ksc value from detail/memo/title for test nodes */
+  function extractKsc(node) {
+    const src = [node.title, node.detail, node.memo].join(' ');
+    const m = src.match(/(\d+)\s*ksc/i);
+    return m ? m[1] + ' ksc' : null;
+  }
+
+  function renderFlow() {
+    const flow = flowData[currentFlowKey];
+    if (!flow) return;
+
+    const NODE_W = 190, ROW_GAP = 80, COL_GAP = 100, PAD = 40;
+    const STEP_X = NODE_W + COL_GAP;
+
+    // Estimate node height based on content
+    function nodeH(node) {
+      const hasImgs = (node.images?.length || 0) > 0 || !!node.image;
+      let h = 70;
+      if (node.time)   h += 22;
+      if (hasImgs)     h += 90;
+      if (node.detail) h += 20;
+      if (node.memo)   h += 18;
+      if (!node.memo && !node.time && !node.detail && !hasImgs) h += 16;
+      return h;
+    }
+
+    // ── Assign column (X) via DFS ──
+    const colMap = {}; // id → col
+    function assignCol(id, col) {
+      if (!id || !flow.nodes[id] || colMap[id] !== undefined) return;
+      colMap[id] = col;
+      assignCol(flow.nodes[id].rightId, col + 1);
+      assignCol(flow.nodes[id].downId,  col);
+    }
+    assignCol(flow.rootId, 0);
+
+    // ── Assign Y: DFS rightId-first, track colBottom to prevent overlap ──
+    const pixY = {};
+    const colBottom = {}; // col → current lowest bottom Y
+
+    // Build reverse lookup for parents
+    const rightParentOf = {}, downParentOf = {};
+    Object.keys(flow.nodes).forEach(pid => {
+      const n = flow.nodes[pid];
+      if (n.rightId) rightParentOf[n.rightId] = pid;
+      if (n.downId)  downParentOf[n.downId]   = pid;
+    });
+
+    function placeNode(id) {
+      if (!id || !flow.nodes[id] || pixY[id] !== undefined) return;
+      const node = flow.nodes[id];
+      const col  = colMap[id] || 0;
+      const h    = nodeH(node);
+
+      const rp = rightParentOf[id];
+      const dp = downParentOf[id];
+      // colFloor: lowest safe Y for this column (0 if column is empty)
+      const colFloor = colBottom[col] !== undefined ? colBottom[col] + ROW_GAP : 0;
+      let y;
+
+      if (!rp && !dp) {
+        // root
+        y = PAD;
+      } else if (rp) {
+        // right-child: align with parent's Y, but push down if column is occupied
+        y = Math.max(pixY[rp] ?? PAD, colFloor);
+      } else {
+        // down-child: below parent's bottom, but also respect column occupancy
+        const parentBottom = (pixY[dp] ?? PAD) + nodeH(flow.nodes[dp]);
+        y = Math.max(parentBottom + ROW_GAP, colFloor);
+      }
+
+      pixY[id] = y;
+      colBottom[col] = Math.max(colBottom[col] ?? 0, y + h);
+
+      // Process rightId first so right-columns fill up before placing down-children
+      placeNode(node.rightId);
+      placeNode(node.downId);
+    }
+
+    placeNode(flow.rootId);
+
+    // ── Alignment pass: if a right-child is lower than its parent,
+    //    push the parent (and its entire down-chain) down to match ──
+    function pushDownChain(id, delta) {
+      if (!id || !flow.nodes[id] || delta <= 0) return;
+      pixY[id] += delta;
+      const col = colMap[id];
+      colBottom[col] = Math.max(colBottom[col] ?? 0, pixY[id] + nodeH(flow.nodes[id]));
+      pushDownChain(flow.nodes[id].downId, delta);
+    }
+
+    let alignChanged = true;
+    while (alignChanged) {
+      alignChanged = false;
+      Object.keys(flow.nodes).forEach(id => {
+        const node = flow.nodes[id];
+        if (!node.rightId) return;
+        const py = pixY[id], cy = pixY[node.rightId];
+        if (py === undefined || cy === undefined) return;
+        if (cy > py) {
+          pushDownChain(id, cy - py);
+          alignChanged = true;
+        }
+      });
+    }
+
+    // Canvas size
+    const maxCol = Math.max(0, ...Object.keys(colMap).map(id => colMap[id]));
+    const maxBottom = Math.max(0, ...Object.keys(pixY).map(id => pixY[id] + nodeH(flow.nodes[id])));
+    const W = (maxCol + 2) * STEP_X + PAD * 2;
+    const H = maxBottom + PAD * 2;
+
+    const canvas = document.getElementById('flowCanvas');
+    const svg    = document.getElementById('flowSvg');
+    Array.from(canvas.children).forEach(c => { if (c !== svg) c.remove(); });
+    svg.innerHTML = `<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/></marker></defs>`;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    svg.setAttribute('width', W);
+    svg.setAttribute('height', H);
+
+    const nX = id => PAD + (colMap[id] || 0) * STEP_X;
+    const nY = id => pixY[id] ?? PAD;
+
+    // Draw arrows
+    Object.keys(flow.nodes).forEach(id => {
+      const node = flow.nodes[id];
+      const h  = nodeH(node);
+      const nx = nX(id), ny = nY(id);
+      const cx = nx + NODE_W / 2, cy = ny + h / 2;
+
+      if (node.rightId && pixY[node.rightId] !== undefined) {
+        const rh = nodeH(flow.nodes[node.rightId]);
+        const ty = nY(node.rightId) + rh / 2;
+        addArrow(svg, nx + NODE_W, cy, nX(node.rightId), ty);
+      }
+      if (node.downId && pixY[node.downId] !== undefined) {
+        const tx = nX(node.downId) + NODE_W / 2;
+        addArrow(svg, cx, ny + h, tx, nY(node.downId));
+      }
+    });
+
+    // Draw nodes + buttons
+    Object.keys(flow.nodes).forEach(id => {
+      const node   = flow.nodes[id];
+      const isRoot = id === flow.rootId;
+      const h = nodeH(node);
+      const x = nX(id), y = nY(id);
+
+      const nodeType = isRoot ? 'root' : getNodeType(node);
+      const typeMeta = NODE_TYPE_META[nodeType] || NODE_TYPE_META.default;
+      const kscVal   = nodeType === 'test' ? extractKsc(node) : null;
+
+      const card = document.createElement('div');
+      card.className = 'flow-node' + (isRoot ? ' flow-node-root' : (typeMeta.cls ? ' ' + typeMeta.cls : ''));
+      card.style.left = x + 'px';
+      card.style.top  = y + 'px';
+
+      const hasDetail = node.memo || node.time || node.detail || node.image || node.images?.length;
+      card.innerHTML = `
+        ${typeMeta.label ? `<div class="flow-node-type-badge ${typeMeta.badge}">${typeMeta.label}</div>` : ''}
+        <div class="flow-node-header">
+          <span class="flow-node-title">${escHtml(node.title)}</span>
+          ${!isRoot ? `<button class="flow-node-del" title="ลบ" onclick="event.stopPropagation();deleteFlowNode('${id}')">✕</button>` : ''}
+        </div>
+        ${node.time ? `<div class="flow-node-tag">🕐 ${escHtml(node.time)}</div>` : ''}
+        ${kscVal    ? `<div class="flow-node-ksc">${escHtml(kscVal)}</div>` : ''}
+        ${(() => {
+          const imgs = node.images?.length ? node.images : (node.image ? [node.image] : []);
+          if (!imgs.length) return '';
+          window._nodeImgs[id] = imgs;
+          const extra = imgs.length - 1;
+          const badge = extra > 0
+            ? `<div onclick="event.stopPropagation();openLightbox(window._nodeImgs['${id}'],1)" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.62);color:white;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(2px);">+${extra}</div>`
+            : '';
+          return `<div style="position:relative;margin:5px 0;">
+            <img src="${imgs[0]}" onclick="event.stopPropagation();openLightbox(window._nodeImgs['${id}'],0)" style="width:100%;border-radius:6px;object-fit:cover;max-height:80px;display:block;cursor:zoom-in;"/>
+            ${badge}
+          </div>`;
+        })()}
+        ${node.detail ? `<div class="flow-node-preview">${escHtml(node.detail.substring(0,55))}${node.detail.length>55?'…':''}</div>` : ''}
+        ${node.memo   ? `<div class="flow-node-preview" style="color:#94a3b8;font-size:11px;">${escHtml(node.memo)}</div>` : ''}
+        ${!hasDetail  ? `<div class="flow-node-hint">แตะเพื่อเพิ่มรายละเอียด</div>` : ''}
+        <div class="flow-node-footer">
+          <button class="flow-node-edit-btn" onclick="event.stopPropagation();openNodeEdit('${id}')">✏️ แก้ไข</button>
+        </div>
+      `;
+      canvas.appendChild(card);
+
+      // Right add button
+      if (!node.rightId) {
+        const btn = document.createElement('button');
+        btn.className = 'flow-add-btn';
+        btn.title = 'เพิ่มทางขวา';
+        btn.textContent = '+→';
+        btn.style.left = (x + NODE_W + (COL_GAP - 34) / 2) + 'px';
+        btn.style.top  = (y + h / 2 - 17) + 'px';
+        btn.onclick = () => addFlowNode(id, 'right');
+        canvas.appendChild(btn);
+      }
+
+      // Down add button
+      if (!node.downId) {
+        const btn = document.createElement('button');
+        btn.className = 'flow-add-btn';
+        btn.title = 'เพิ่มด้านล่าง';
+        btn.textContent = '+↓';
+        btn.style.left = (x + NODE_W / 2 - 17) + 'px';
+        btn.style.top  = (y + h + (ROW_GAP - 34) / 2) + 'px';
+        btn.onclick = () => addFlowNode(id, 'down');
+        canvas.appendChild(btn);
+      }
+    });
+  }
+
+  function addArrow(svg, x1, y1, x2, y2) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#94a3b8');
+    line.setAttribute('stroke-width', '1.5');
+    line.setAttribute('marker-end', 'url(#arr)');
+    svg.appendChild(line);
+  }
+
+  function addFlowNode(parentId, dir) {
+    const flow = flowData[currentFlowKey];
+    const newId = 'n_' + Date.now();
+    flow.nodes[newId] = { title: 'หัวข้อใหม่', memo: '', rightId: null, downId: null };
+    if (dir === 'right') flow.nodes[parentId].rightId = newId;
+    else                 flow.nodes[parentId].downId  = newId;
+    saveFlowData();
+    renderFlow();
+  }
+
+  function deleteFlowNode(id) {
+    const flow = flowData[currentFlowKey];
+    Object.values(flow.nodes).forEach(n => {
+      if (n.rightId === id) n.rightId = null;
+      if (n.downId  === id) n.downId  = null;
+    });
+    (function rm(nid) {
+      if (!nid || !flow.nodes[nid]) return;
+      const n = flow.nodes[nid];
+      rm(n.rightId); rm(n.downId);
+      delete flow.nodes[nid];
+    })(id);
+    saveFlowData();
+    renderFlow();
+  }
+
+  function updateFlowTitle(id, el) {
+    const t = el.textContent.trim();
+    flowData[currentFlowKey].nodes[id].title = t || '(ไม่มีชื่อ)';
+    saveFlowData();
+  }
+
+  function updateFlowMemo(id, el) {
+    flowData[currentFlowKey].nodes[id].memo = el.textContent.trim();
+    saveFlowData();
+  }
+
+  /* ===== LIGHTBOX ===== */
+  let lbImages = [], lbIndex = 0;
+
+  function openLightbox(images, idx) {
+    lbImages = Array.isArray(images) ? images : [images];
+    lbIndex  = idx || 0;
+    _lbShow();
+    const lb = document.getElementById('lightbox');
+    lb.style.opacity = '1'; lb.style.pointerEvents = 'all';
+    setTimeout(() => { document.getElementById('lightboxImg').style.transform = 'scale(1)'; }, 10);
+  }
+
+  function _lbShow() {
+    const img  = document.getElementById('lightboxImg');
+    const prev = document.getElementById('lbPrev');
+    const next = document.getElementById('lbNext');
+    const ctr  = document.getElementById('lbCounter');
+    img.src = lbImages[lbIndex];
+    prev.style.display = lbImages.length > 1 ? 'flex' : 'none';
+    next.style.display = lbImages.length > 1 ? 'flex' : 'none';
+    ctr.textContent    = lbImages.length > 1 ? `${lbIndex + 1} / ${lbImages.length}` : '';
+  }
+
+  function lbNav(dir) {
+    lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+    const img = document.getElementById('lightboxImg');
+    img.style.opacity = '0';
+    setTimeout(() => { _lbShow(); img.style.opacity = '1'; }, 120);
+  }
+
+  function closeLightbox() {
+    const lb  = document.getElementById('lightbox');
+    const img = document.getElementById('lightboxImg');
+    img.style.transform = 'scale(0.9)';
+    lb.style.opacity = '0'; lb.style.pointerEvents = 'none';
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowRight') lbNav(1);
+    if (e.key === 'ArrowLeft')  lbNav(-1);
+  });
+
+  /* ===== NODE EDIT POPUP ===== */
+  let editingNodeId = null;
+
+  let pendingImages = []; // working copy while modal is open
+  let selectedNodeTitle = null; // 'โม่'|'Slump'|'ลูกปูน'|'ผลทดสอบ'|'custom'
+
+  function pickNodeType(btn) {
+    document.querySelectorAll('#neTypePicker button').forEach(b => {
+      b.style.outline = 'none';
+      b.style.fontWeight = 'normal';
+    });
+    btn.style.outline = '2px solid #1a3a6b';
+    btn.style.fontWeight = '700';
+  }
+
+  function pickNodeTitle(btn) {
+    document.querySelectorAll('#neTitlePicker button').forEach(b => {
+      b.style.outline = 'none';
+      b.style.fontWeight = 'normal';
+    });
+    btn.style.outline = '2px solid #1a3a6b';
+    btn.style.fontWeight = '700';
+    selectedNodeTitle = btn.dataset.title;
+
+    const customInput = document.getElementById('neTitle');
+    const numberRow   = document.getElementById('neTitleNumberRow');
+    const numInput    = document.getElementById('neTitleNumber');
+
+    if (btn.dataset.title === 'custom') {
+      customInput.style.display = 'block';
+      numberRow.style.display = 'none';
+      customInput.focus();
+    } else {
+      customInput.style.display = 'none';
+      numberRow.style.display = 'flex';
+      numInput.value = '';
+      updateTitlePreview();
+      numInput.focus();
+    }
+  }
+
+  function updateTitlePreview() {
+    const num = document.getElementById('neTitleNumber').value.trim();
+    const preview = document.getElementById('neTitlePreview');
+    const base = selectedNodeTitle && selectedNodeTitle !== 'custom' ? selectedNodeTitle : '';
+    preview.textContent = base + (num ? num : '') + (num ? '' : ' + ?') ;
+    // simpler: just show base + number
+    preview.textContent = num ? (base + num) : base;
+  }
+
+  function openNodeEdit(id) {
+    const node = flowData[currentFlowKey].nodes[id];
+    if (!node) return;
+    editingNodeId = id;
+    // migrate legacy single image
+    if (node.image && !node.images) node.images = [node.image];
+    pendingImages = [...(node.images || [])];
+
+    document.getElementById('neTime').value   = node.time   || '';
+    document.getElementById('neMemo').value   = node.memo   || '';
+    document.getElementById('neDetail').value = node.detail || '';
+    document.getElementById('neImageInput').value = '';
+
+    // Restore title picker selection
+    const titleBtns = document.querySelectorAll('#neTitlePicker button');
+    let titleMatched = false;
+    titleBtns.forEach(b => {
+      b.style.outline = 'none'; b.style.fontWeight = 'normal';
+      if (b.dataset.title !== 'custom' && b.dataset.title === node.title) {
+        b.style.outline = '2px solid #1a3a6b'; b.style.fontWeight = '700';
+        titleMatched = true;
+        selectedNodeTitle = node.title;
+      }
+    });
+    const customInput = document.getElementById('neTitle');
+    const numberRow   = document.getElementById('neTitleNumberRow');
+    const numInput    = document.getElementById('neTitleNumber');
+    if (!titleMatched) {
+      titleBtns.forEach(b => { if (b.dataset.title === 'custom') { b.style.outline = '2px solid #1a3a6b'; b.style.fontWeight = '700'; } });
+      customInput.style.display = 'block';
+      customInput.value = node.title || '';
+      numberRow.style.display = 'none';
+      selectedNodeTitle = 'custom';
+    } else {
+      customInput.style.display = 'none';
+      customInput.value = '';
+      // Extract trailing number from saved title e.g. "โม่3" → num="3"
+      const base = selectedNodeTitle;
+      const suffix = node.title.startsWith(base) ? node.title.slice(base.length) : '';
+      numInput.value = suffix;
+      numberRow.style.display = 'flex';
+      updateTitlePreview();
+    }
+
+    // Restore type picker selection
+    const savedType = node.nodeType || 'auto';
+    document.querySelectorAll('#neTypePicker button').forEach(b => {
+      b.style.outline = 'none'; b.style.fontWeight = 'normal';
+      if (b.dataset.type === savedType) { b.style.outline = '2px solid #1a3a6b'; b.style.fontWeight = '700'; }
+    });
+
+    renderImageGrid();
+
+    const ov = document.getElementById('nodeEditOverlay');
+    const pn = document.getElementById('nodeEditPanel');
+    ov.style.opacity = '1'; ov.style.pointerEvents = 'all';
+    pn.style.transform = 'scale(1)';
+    setTimeout(() => {
+      const t = document.getElementById('neTitle');
+      t.focus();
+      t.select();
+    }, 150);
+  }
+
+  function renderImageGrid() {
+    const grid = document.getElementById('neImagesGrid');
+    grid.innerHTML = '';
+    pendingImages.forEach((src, i) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f1f5f9;';
+      wrap.innerHTML = `
+        <img src="${src}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;"
+          onclick="openLightbox(pendingImages, ${i})"/>
+        <button onclick="removePendingImage(${i})" style="
+          position:absolute;top:3px;right:3px;
+          background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;
+          width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1;">✕</button>
+      `;
+      grid.appendChild(wrap);
+    });
+    grid.style.display = pendingImages.length ? 'grid' : 'none';
+  }
+
+  function removePendingImage(i) {
+    pendingImages.splice(i, 1);
+    renderImageGrid();
+  }
+
+  function handleImageUpload(event) {
+    const files = Array.from(event.target.files);
+    let loaded = 0;
+    files.forEach(file => {
+      if (file.size > 50 * 1024 * 1024) { alert(`${file.name} ใหญ่เกิน 50MB`); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        pendingImages.push(e.target.result);
+        loaded++;
+        if (loaded === files.length) renderImageGrid();
+      };
+      reader.readAsDataURL(file);
+    });
+    event.target.value = '';
+  }
 
   function saveNodeEdit() {
     if (!editingNodeId) return;
     const node = flowData[currentFlowKey].nodes[editingNodeId];
-    if (selectedNodeTitle && selectedNodeTitle !== 'custom') { const num = document.getElementById('neTitleNumber').value.trim(); node.title = selectedNodeTitle + (num ? num : ''); }
-    else { node.title = document.getElementById('neTitle').value.trim() || '(à¹à¸¡à¹à¸¡à¸µà¸à¸·à¹à¸­)'; }
-    node.time = document.getElementById('neTime').value;
-    node.memo = document.getElementById('neMemo').value.trim();
-    node.detail = document.getElementById('neDetail').value.trim();
-    node.images = [...pendingImages];
-    node.image = '';
+    if (selectedNodeTitle && selectedNodeTitle !== 'custom') {
+      const num = document.getElementById('neTitleNumber').value.trim();
+      node.title = selectedNodeTitle + (num ? num : '');
+    } else {
+      node.title = document.getElementById('neTitle').value.trim() || '(ไม่มีชื่อ)';
+    }
+    node.time     = document.getElementById('neTime').value;
+    node.memo     = document.getElementById('neMemo').value.trim();
+    node.detail   = document.getElementById('neDetail').value.trim();
+    node.images   = [...pendingImages];
+    node.image    = ''; // clear legacy
+    // Save manually picked type
     const activeType = document.querySelector('#neTypePicker button[style*="outline: 2px"]');
     node.nodeType = activeType ? activeType.dataset.type : 'auto';
     saveFlowData();
@@ -567,49 +1500,55 @@
     renderFlow();
   }
 
-  function closeNodeEdit() { const ov = document.getElementById('nodeEditOverlay'); const pn = document.getElementById('nodeEditPanel'); ov.style.opacity = '0'; ov.style.pointerEvents = 'none'; pn.style.transform = 'scale(0.95)'; editingNodeId = null; pendingImages = []; }
-  function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-  function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
-  function selectColor(el) { document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected')); el.classList.add('selected'); selectedColor = el.dataset.color; }
-  function changeMonth(delta) { currentMonth += delta; if (currentMonth < 0) { currentMonth = 11; currentYear--; } if (currentMonth > 11) { currentMonth = 0; currentYear++; } renderCalendar(); }
-  function goToday() { const t = new Date(); currentYear = t.getFullYear(); currentMonth = t.getMonth(); renderCalendar(); }
-  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-  /* ===== INIT with Firestore ===== */
-  async function init() {
-    const now = new Date();
-    currentYear = now.getFullYear();
-    currentMonth = now.getMonth();
-
-    setSyncStatus('', 'âï¸ à¸à¸³à¸¥à¸±à¸à¹à¸«à¸¥à¸...');
-
-    try {
-      const [notesDoc, flowDoc] = await Promise.all([
-        db.collection('sinudom').doc('notes').get(),
-        db.collection('sinudom').doc('flow').get()
-      ]);
-      notes    = notesDoc.exists ? (notesDoc.data().data || {}) : {};
-      flowData = flowDoc.exists  ? (flowDoc.data().data  || {}) : {};
-      setSyncStatus('saved', 'âï¸ à¸à¸´à¸à¸à¹à¹à¸¥à¹à¸§');
-    } catch(e) {
-      console.warn('Firestore load failed', e);
-      notes = {}; flowData = {};
-      setSyncStatus('error', 'â ï¸ à¸­à¸­à¸à¹à¸¥à¸à¹');
-    }
-
-    renderCalendar();
-
-    // Realtime updates for notes
-    db.collection('sinudom').doc('notes').onSnapshot(doc => {
-      if (doc.exists && !doc.metadata.hasPendingWrites) {
-        notes = doc.data().data || {};
-        renderCalendar();
-        setSyncStatus('saved', 'âï¸ à¸à¸´à¸à¸à¹à¹à¸¥à¹à¸§');
-      }
-    });
+  function closeNodeEdit() {
+    const ov = document.getElementById('nodeEditOverlay');
+    const pn = document.getElementById('nodeEditPanel');
+    ov.style.opacity = '0'; ov.style.pointerEvents = 'none';
+    pn.style.transform = 'scale(0.95)';
+    editingNodeId = null;
+    pendingImages = [];
   }
 
-  init();
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  function closeModalOutside(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  }
+
+  /* ===== COLOR PICKER ===== */
+  function selectColor(el) {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedColor = el.dataset.color;
+  }
+
+  /* ===== NAVIGATION ===== */
+  function changeMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+    if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+    renderCalendar();
+  }
+
+  function goToday() {
+    const t = new Date();
+    currentYear  = t.getFullYear();
+    currentMonth = t.getMonth();
+    renderCalendar();
+  }
+
+  /* ===== UTILS ===== */
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ===== INIT ===== */
+  const now = new Date();
+  currentYear  = now.getFullYear();
+  currentMonth = now.getMonth();
+  renderCalendar();
 </script>
 </body>
 </html>
