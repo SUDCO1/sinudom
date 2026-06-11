@@ -516,15 +516,83 @@
 <div class="layout">
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-item active"><span class="sidebar-icon">📅</span> ปฏิทิน</div>
-    <div class="sidebar-item"><span class="sidebar-icon">📝</span> โน้ตทั้งหมด</div>
-    <div class="sidebar-item"><span class="sidebar-icon">🔖</span> หมวดหมู่</div>
-    <div class="sidebar-item"><span class="sidebar-icon">🔔</span> การแจ้งเตือน</div>
-    <div class="sidebar-item"><span class="sidebar-icon">⚙️</span> ตั้งค่า</div>
+    <div class="sidebar-item active" id="nav-calendar" onclick="showView('calendar')"><span class="sidebar-icon">📅</span> ปฏิทิน</div>
+    <div class="sidebar-item" id="nav-settings" onclick="showView('settings')"><span class="sidebar-icon">⚙️</span> ตั้งค่า</div>
   </div>
 
   <!-- MAIN -->
   <div class="main">
+
+    <!-- ===== SETTINGS VIEW ===== -->
+    <div id="settingsView" style="display:none;">
+
+      <!-- สิทธิ์การเข้าถึง -->
+      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">🔐 สิทธิ์การเข้าถึงตามตำแหน่ง</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">Admin มีสิทธิ์ทุกอย่างเสมอ — ปรับเฉพาะตำแหน่งอื่น</div>
+          </div>
+          <button onclick="savePerms()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">💾 บันทึกสิทธิ์</button>
+        </div>
+
+        <!-- Role chips -->
+        <div id="roleChips" style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 16px;align-items:center;"></div>
+
+        <!-- Permission table placeholder -->
+      </div>
+
+      <!-- จัดการผู้ใช้ -->
+      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">👤 จัดการผู้ใช้</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">เพิ่ม / แก้ไข / ลบ บัญชีผู้ใช้และกำหนดสิทธิ์</div>
+          </div>
+          <button onclick="renderUsers()" style="background:#f0f4ff;color:#1a3a6b;border:1px solid #c7d7f5;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;">🔄 รีเฟรช</button>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:2px solid #e5e7eb;">อีเมล</th>
+              <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:2px solid #e5e7eb;">สิทธิ์</th>
+              <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:2px solid #e5e7eb;">เพิ่มโดย</th>
+              <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:2px solid #e5e7eb;">วันที่เพิ่ม</th>
+              <th style="padding:10px 12px;border-bottom:2px solid #e5e7eb;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+
+        <!-- เพิ่มผู้ใช้ใหม่ -->
+        <div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:18px;">
+          <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;">+ เพิ่มผู้ใช้ใหม่</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:180px;">
+              <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">👤 อีเมล *</div>
+              <input id="newUserEmail" type="email" placeholder="user@company.com" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+            </div>
+            <div style="flex:1;min-width:160px;">
+              <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">🔒 รหัสผ่าน *</div>
+              <input id="newUserPass" type="password" placeholder="อย่างน้อย 6 ตัวอักษร" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+            </div>
+            <div style="flex:0 0 140px;">
+              <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">🏷️ สิทธิ์ *</div>
+              <select id="newUserRole" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;" id="newUserRole">
+                <option>Admin</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button onclick="addUser()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;">➕ เพิ่ม</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CALENDAR VIEW ===== -->
+    <div id="calendarView">
     <div class="calendar-controls">
       <div class="month-nav">
         <button class="btn-nav" onclick="changeMonth(-1)">◀ เดือนก่อน</button>
@@ -546,6 +614,7 @@
       </div>
       <div class="calendar-body" id="calendarBody"></div>
     </div>
+    </div><!-- end calendarView -->
   </div>
 </div>
 
@@ -785,6 +854,238 @@
   let currentYear, currentMonth;
   let selectedDateKey = null;
   let selectedColor = 'green';
+
+  // ===== SETTINGS: VIEW SWITCH =====
+  function showView(view) {
+    document.getElementById('calendarView').style.display   = view === 'calendar' ? '' : 'none';
+    document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
+    document.getElementById('nav-calendar').classList.toggle('active', view === 'calendar');
+    document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
+    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); }
+  }
+
+  // ===== SETTINGS: PERMISSIONS =====
+  const PAGES = [
+    { icon:'📊', label:'สรุปภาพรวม' },
+    { icon:'🛒', label:'ฝ่ายขาย' },
+    { icon:'📋', label:'สถานะออเดอร์' },
+    { icon:'🏭', label:'ฝ่ายผลิต' },
+    { icon:'🚚', label:'ฝ่ายขนส่ง' },
+    { icon:'📦', label:'ฝ่ายสต็อก' },
+    { icon:'👥', label:'ลูกค้า' },
+  ];
+
+  // roles: array of { name, color }
+  let roles = JSON.parse(localStorage.getItem('calRoles') || 'null') || [
+    { name:'Manager', color:'#3b82f6' },
+    { name:'Sale',    color:'#22c55e' },
+  ];
+
+  let perms = JSON.parse(localStorage.getItem('calPerms') || 'null') || {};
+
+  function ensurePerms() {
+    PAGES.forEach(p => {
+      if (!perms[p.label]) perms[p.label] = {};
+      roles.forEach(r => {
+        if (!perms[p.label][r.name]) perms[p.label][r.name] = { read: true, write: false, del: false };
+      });
+    });
+  }
+
+  function savePerms() {
+    localStorage.setItem('calPerms', JSON.stringify(perms));
+    localStorage.setItem('calRoles', JSON.stringify(roles));
+    if (typeof window.fbSavePerms === 'function') window.fbSavePerms(perms);
+    if (typeof window.fbSaveRoles === 'function') window.fbSaveRoles(roles);
+    alert('บันทึกสิทธิ์เรียบร้อย');
+  }
+
+  // Palette for auto-assigning colors to new roles
+  const COLOR_PALETTE = ['#8b5cf6','#f59e0b','#ec4899','#14b8a6','#f97316','#06b6d4','#a3e635'];
+  let paletteIdx = 0;
+
+  function addRole() {
+    const name = prompt('ชื่อตำแหน่งใหม่:','');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    if (roles.find(r => r.name === trimmed)) return alert('มีตำแหน่งนี้อยู่แล้ว');
+    const color = COLOR_PALETTE[paletteIdx++ % COLOR_PALETTE.length];
+    roles.push({ name: trimmed, color });
+    ensurePerms();
+    renderPermTable();
+    renderRoleChips();
+    // also refresh user dropdown
+    renderUsers();
+  }
+
+  function deleteRole(name) {
+    if (!confirm(`ลบตำแหน่ง "${name}" ?`)) return;
+    roles = roles.filter(r => r.name !== name);
+    PAGES.forEach(p => { if (perms[p.label]) delete perms[p.label][name]; });
+    if (typeof window.fbSaveRoles === 'function') window.fbSaveRoles(roles);
+    if (typeof window.fbSavePerms === 'function') window.fbSavePerms(perms);
+    renderPermTable();
+    renderRoleChips();
+    renderUsers();
+  }
+
+  function renderRoleChips() {
+    const el = document.getElementById('roleChips');
+    el.innerHTML = '';
+    // Admin chip (fixed)
+    const adminChip = document.createElement('span');
+    adminChip.style.cssText = 'background:#f5a623;color:white;border-radius:20px;padding:5px 14px;font-size:13px;font-weight:600;';
+    adminChip.textContent = 'Admin';
+    el.appendChild(adminChip);
+    // Dynamic roles
+    roles.forEach(r => {
+      const wrap = document.createElement('span');
+      wrap.style.cssText = `display:inline-flex;align-items:center;gap:6px;background:${r.color}22;color:${r.color};border-radius:20px;padding:5px 12px 5px 14px;font-size:13px;font-weight:600;`;
+      wrap.innerHTML = `${r.name} <button onclick="deleteRole('${r.name}')" title="ลบตำแหน่งนี้" style="background:none;border:none;cursor:pointer;color:${r.color};font-size:14px;line-height:1;padding:0;opacity:0.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">✕</button>`;
+      el.appendChild(wrap);
+    });
+    // Add role button
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '+ เพิ่มตำแหน่ง';
+    addBtn.style.cssText = 'background:white;border:2px dashed #d1d5db;color:#9ca3af;border-radius:20px;padding:5px 14px;font-size:13px;cursor:pointer;';
+    addBtn.onmouseover = () => { addBtn.style.borderColor='#1a3a6b'; addBtn.style.color='#1a3a6b'; };
+    addBtn.onmouseout  = () => { addBtn.style.borderColor='#d1d5db'; addBtn.style.color='#9ca3af'; };
+    addBtn.onclick = addRole;
+    el.appendChild(addBtn);
+  }
+
+  function renderPermTable() {
+    ensurePerms();
+    // Update column headers
+    const thead = document.getElementById('permColHeaders');
+    thead.innerHTML = roles.map(r =>
+      `<th style="padding:10px 16px;color:${r.color};font-weight:700;border-bottom:2px solid #e5e7eb;text-align:center;white-space:nowrap;">${r.name}</th>`
+    ).join('');
+
+    const tb = document.getElementById('permTableBody');
+    tb.innerHTML = '';
+    PAGES.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f0f0f0';
+      let cells = `<td style="padding:10px 12px;font-weight:500;color:#374151;">${p.icon} ${p.label}</td>`;
+      cells += `<td style="padding:10px 16px;text-align:center;"><span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">ทั้งหมด</span></td>`;
+      roles.forEach(role => {
+        const perm = perms[p.label][role.name];
+        cells += `<td style="padding:8px 12px;text-align:center;">
+          <div style="display:inline-flex;gap:6px;">
+            <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;">
+              <input type="checkbox" ${perm.read?'checked':''} onchange="togglePerm('${p.label}','${role.name}','read',this.checked)"> ดู
+            </label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;">
+              <input type="checkbox" ${perm.write?'checked':''} onchange="togglePerm('${p.label}','${role.name}','write',this.checked)"> แก้ไข
+            </label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;">
+              <input type="checkbox" ${perm.del?'checked':''} onchange="togglePerm('${p.label}','${role.name}','del',this.checked)"> ลบ
+            </label>
+          </div>
+        </td>`;
+      });
+      tr.innerHTML = cells;
+      tb.appendChild(tr);
+    });
+  }
+
+  function togglePerm(page, role, action, val) {
+    if (!perms[page]) perms[page] = {};
+    if (!perms[page][role]) perms[page][role] = { read:false, write:false, del:false };
+    perms[page][role][action] = val;
+  }
+
+  // ===== SETTINGS: USERS =====
+  let users = JSON.parse(localStorage.getItem('calUsers') || 'null') || [
+    { email:'admin@gmail.com', role:'Admin', addedBy:'system-bootstrap', date:'26/5/2569', isMe: true },
+    { email:'tokaow@gmail.com', role:'เก้า test', addedBy:'admin@gmail.com', date:'30/5/2569' },
+  ];
+
+  const roleColors = { Admin:'#f5a623', Manager:'#3b82f6', Sale:'#22c55e' };
+  function roleStyle(r) {
+    const c = roleColors[r] || '#8b5cf6';
+    return `background:${c}22;color:${c};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;`;
+  }
+
+  function renderUsers() {
+    // Refresh "เพิ่มผู้ใช้ใหม่" role dropdown
+    const sel = document.getElementById('newUserRole');
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = [...roles.map(r=>r.name),'Admin'].map(r=>`<option ${r===cur?'selected':''}>${r}</option>`).join('');
+    }
+    const tb = document.getElementById('userTableBody');
+    tb.innerHTML = '';
+    users.forEach((u, i) => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f0f0f0';
+      tr.innerHTML = `
+        <td style="padding:10px 12px;color:#1a3a6b;font-weight:500;">${u.email}</td>
+        <td style="padding:10px 12px;">
+          ${u.isMe
+            ? `<span style="${roleStyle(u.role)}">${u.role}</span>`
+            : `<select onchange="changeRole(${i},this.value)" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;outline:none;">
+                ${[...roles.map(r=>r.name),'Admin'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
+               </select>
+               <button onclick="saveRole(${i})" style="margin-left:6px;background:#1a3a6b;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">บันทึก</button>`
+          }
+        </td>
+        <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.addedBy}</td>
+        <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.date}</td>
+        <td style="padding:10px 12px;text-align:center;">
+          ${u.isMe
+            ? `<span style="font-size:12px;color:#9ca3af;">ไม่สามารถลบตัวเองได้</span>`
+            : `<button onclick="deleteUser(${i})" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">🗑 ลบ</button>`
+          }
+        </td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  function changeRole(i, val) { users[i].role = val; }
+  function saveRole(i) {
+    const u = users[i];
+    if (u._id && typeof window.fbUpdateUserRole === 'function') {
+      window.fbUpdateUserRole(u._id, u.role);
+    }
+    localStorage.setItem('calUsers', JSON.stringify(users));
+    renderUsers();
+    alert('บันทึกสิทธิ์ ' + u.email + ' เรียบร้อย');
+  }
+  function deleteUser(i) {
+    if (!confirm('ลบผู้ใช้ ' + users[i].email + ' ?')) return;
+    const u = users[i];
+    if (u._id && typeof window.fbDeleteUser === 'function') {
+      window.fbDeleteUser(u._id);
+    }
+    users.splice(i, 1);
+    localStorage.setItem('calUsers', JSON.stringify(users));
+    renderUsers();
+  }
+  function addUser() {
+    const email = document.getElementById('newUserEmail').value.trim();
+    const pass  = document.getElementById('newUserPass').value.trim();
+    const role  = document.getElementById('newUserRole').value;
+    if (!email || !pass) return alert('กรุณากรอกอีเมลและรหัสผ่าน');
+    if (pass.length < 6) return alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+    if (users.find(u => u.email === email)) return alert('อีเมลนี้มีอยู่แล้ว');
+    if (typeof window.fbAddUser === 'function') {
+      window.fbAddUser(email, role).then(newUser => {
+        users.push(newUser);
+        localStorage.setItem('calUsers', JSON.stringify(users));
+        renderUsers();
+      });
+    } else {
+      const today = new Date();
+      const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
+      users.push({ email, role, addedBy:'admin', date: d });
+      localStorage.setItem('calUsers', JSON.stringify(users));
+      renderUsers();
+    }
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserPass').value  = '';
+  }
 
   // Load notes from localStorage
   let notes = JSON.parse(localStorage.getItem('calendarNotes') || '{}');
@@ -2130,6 +2431,140 @@
   })();
 
 </script>
-<script type="module" src="firebase-sync.js"></script>
+<!-- ===== FIREBASE SDK ===== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, collection,
+    getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD4sL59SW_QoKaOc7RoEa2ASraMkjw_O3E",
+    authDomain: "sinudom-6dd49.firebaseapp.com",
+    databaseURL: "https://sinudom-6dd49-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sinudom-6dd49",
+    storageBucket: "sinudom-6dd49.firebasestorage.app",
+    messagingSenderId: "1007921673061",
+    appId: "1:1007921673061:web:06cfb24b6ddf804eeba78c",
+    measurementId: "G-C6BK5RXJF7"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ── Auth state ──────────────────────────────────────────────
+  onAuthStateChanged(auth, user => {
+    const subtitleEl = document.querySelector('.navbar-subtitle');
+    if (user) {
+      if (subtitleEl) subtitleEl.textContent = 'Note Calendar · ' + user.email;
+    }
+  });
+
+  // ── Logout ──────────────────────────────────────────────────
+  document.querySelector('.btn-logout').addEventListener('click', () => {
+    signOut(auth).then(() => {
+      window.location.href = 'index.html';
+    }).catch(() => {
+      alert('ออกจากระบบไม่สำเร็จ');
+    });
+  });
+
+  // ── Helpers ─────────────────────────────────────────────────
+  function todayThai() {
+    const d = new Date();
+    return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+  }
+
+  // ── Roles: load from Firestore ───────────────────────────────
+  async function loadRoles() {
+    const snap = await getDoc(doc(db, 'settings', 'roles'));
+    if (snap.exists()) {
+      window._fbRoles = snap.data().list || [];
+    } else {
+      // seed defaults
+      window._fbRoles = [
+        { name:'Manager', color:'#3b82f6' },
+        { name:'Sale',    color:'#22c55e' },
+      ];
+      await setDoc(doc(db, 'settings', 'roles'), { list: window._fbRoles });
+    }
+    // push into the main app's roles array
+    if (typeof roles !== 'undefined') {
+      roles.length = 0;
+      window._fbRoles.forEach(r => roles.push(r));
+    }
+  }
+
+  // ── Roles: save to Firestore ─────────────────────────────────
+  window.fbSaveRoles = async function(rolesArr) {
+    await setDoc(doc(db, 'settings', 'roles'), { list: rolesArr });
+  };
+
+  // ── Perms: load from Firestore ───────────────────────────────
+  async function loadPerms() {
+    const snap = await getDoc(doc(db, 'settings', 'perms'));
+    if (snap.exists() && typeof perms !== 'undefined') {
+      const data = snap.data();
+      Object.keys(data).forEach(k => { perms[k] = data[k]; });
+    }
+  }
+
+  // ── Perms: save to Firestore ─────────────────────────────────
+  window.fbSavePerms = async function(permsObj) {
+    await setDoc(doc(db, 'settings', 'perms'), permsObj);
+  };
+
+  // ── Users: load from Firestore ───────────────────────────────
+  async function loadUsers() {
+    const snap = await getDocs(collection(db, 'appUsers'));
+    if (!snap.empty) {
+      const list = [];
+      snap.forEach(d => list.push({ _id: d.id, ...d.data() }));
+      if (typeof users !== 'undefined') {
+        users.length = 0;
+        list.forEach(u => users.push(u));
+      }
+    } else {
+      // seed current auth user as admin if collection empty
+      const u = auth.currentUser;
+      if (u) {
+        const newUser = { email: u.email, role:'Admin', addedBy:'system-bootstrap', date: todayThai(), isMe: true };
+        const ref = await addDoc(collection(db, 'appUsers'), newUser);
+        if (typeof users !== 'undefined') users.push({ _id: ref.id, ...newUser });
+      }
+    }
+  }
+
+  // ── Users: add new user ──────────────────────────────────────
+  window.fbAddUser = async function(email, role) {
+    const newUser = { email, role, addedBy: auth.currentUser?.email || 'admin', date: todayThai() };
+    const ref = await addDoc(collection(db, 'appUsers'), newUser);
+    return { _id: ref.id, ...newUser };
+  };
+
+  // ── Users: update role ───────────────────────────────────────
+  window.fbUpdateUserRole = async function(id, role) {
+    await updateDoc(doc(db, 'appUsers', id), { role });
+  };
+
+  // ── Users: delete user ───────────────────────────────────────
+  window.fbDeleteUser = async function(id) {
+    await deleteDoc(doc(db, 'appUsers', id));
+  };
+
+  // ── Init: load everything then refresh UI ────────────────────
+  onAuthStateChanged(auth, async user => {
+    if (!user) return;
+    await loadRoles();
+    await loadPerms();
+    await loadUsers();
+    if (typeof renderRoleChips === 'function') renderRoleChips();
+    if (typeof renderPermTable === 'function') renderPermTable();
+    if (typeof renderUsers     === 'function') renderUsers();
+  });
+</script>
 </body>
 </html>
