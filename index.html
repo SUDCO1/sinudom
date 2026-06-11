@@ -1145,21 +1145,25 @@
         };
         alert(msgs[e.code] || 'เกิดข้อผิดพลาด: ' + e.message);
       });
-    } else {
-      const today = new Date();
-      const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
-      users.push({ email, role, addedBy:'admin', date: d });
-      renderUsers();
-      document.getElementById('newUserEmail').value = '';
-      document.getElementById('newUserPass').value  = '';
+      return;
     }
+    const today = new Date();
+    const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
+    users.push({ email, role, addedBy:'admin', date: d });
+    renderUsers();
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserPass').value  = '';
   }
 
   // Load notes from localStorage
-  let notes = JSON.parse(localStorage.getItem('calendarNotes') || '{}');
+  let notes = {}; // โหลดจาก Firestore
 
-  function saveToStorage() {
-    localStorage.setItem('calendarNotes', JSON.stringify(notes));
+  function saveToStorage(dateKey) {
+    // บันทึกเฉพาะ dateKey ที่เปลี่ยนลง Firestore
+    const key = dateKey || selectedDateKey;
+    if (key && typeof window.fbSaveNoteDate === 'function') {
+      window.fbSaveNoteDate(key, notes[key] || []);
+    }
   }
 
   function getDateKey(y, m, d) {
@@ -2645,7 +2649,7 @@
     }
   }
 
-  // ── Users: add new user ──────────────────────────────────────
+  // ── Users: add new user (creates Firebase Auth + Firestore) ──
   window.fbAddUser = async function(email, role, password) {
     const secondaryApp = initializeApp(firebaseConfig, 'secondary_' + Date.now());
     const secondaryAuth = getAuth(secondaryApp);
@@ -2670,12 +2674,30 @@
     await deleteDoc(doc(db, 'appUsers', id));
   };
 
+  // ── Notes: load all from Firestore ───────────────────────────
+  async function loadNotes() {
+    const snap = await getDocs(collection(db, 'notes'));
+    if (typeof notes !== 'undefined') {
+      snap.forEach(d => { notes[d.id] = d.data().list || []; });
+    }
+  }
+
+  // ── Notes: save one date to Firestore ────────────────────────
+  window.fbSaveNoteDate = async function(dateKey, list) {
+    if (list.length === 0) {
+      await deleteDoc(doc(db, 'notes', dateKey));
+    } else {
+      await setDoc(doc(db, 'notes', dateKey), { list });
+    }
+  };
+
   // ── Init: load everything then refresh UI ────────────────────
   onAuthStateChanged(auth, async user => {
     if (!user) return;
     await loadRoles();
     await loadPerms();
     await loadUsers();
+    await loadNotes();
     // Update role button in navbar
     if (typeof users !== 'undefined') {
       const me = users.find(u => u.email === user.email);
@@ -2685,6 +2707,7 @@
     if (typeof renderRoleChips === 'function') renderRoleChips();
     if (typeof renderPermTable === 'function') renderPermTable();
     if (typeof renderUsers     === 'function') renderUsers();
+    if (typeof renderCalendar  === 'function') renderCalendar();
   });
 </script>
 </body>
