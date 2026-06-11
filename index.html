@@ -1133,10 +1133,23 @@
     if (pass.length < 6) return alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
     if (users.find(u => u.email === email)) return alert('อีเมลนี้มีอยู่แล้ว');
     if (typeof window.fbAddUser === 'function') {
-      window.fbAddUser(email, role).then(newUser => {
+      const btn = document.querySelector('[onclick="addUser()"]');
+      if (btn) { btn.disabled = true; btn.textContent = 'กำลังเพิ่ม...'; }
+      window.fbAddUser(email, role, pass).then(newUser => {
         users.push(newUser);
         localStorage.setItem('calUsers', JSON.stringify(users));
         renderUsers();
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserPass').value  = '';
+        if (btn) { btn.disabled = false; btn.textContent = '➕ เพิ่ม'; }
+      }).catch(e => {
+        if (btn) { btn.disabled = false; btn.textContent = '➕ เพิ่ม'; }
+        const msgs = {
+          'auth/email-already-in-use': 'อีเมลนี้มีบัญชีอยู่แล้วในระบบ',
+          'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
+          'auth/weak-password': 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
+        };
+        alert(msgs[e.code] || 'เกิดข้อผิดพลาด: ' + e.message);
       });
     } else {
       const today = new Date();
@@ -1144,9 +1157,9 @@
       users.push({ email, role, addedBy:'admin', date: d });
       localStorage.setItem('calUsers', JSON.stringify(users));
       renderUsers();
+      document.getElementById('newUserEmail').value = '';
+      document.getElementById('newUserPass').value  = '';
     }
-    document.getElementById('newUserEmail').value = '';
-    document.getElementById('newUserPass').value  = '';
   }
 
   // Load notes from localStorage
@@ -2496,7 +2509,7 @@
 </div><!-- /mainApp -->
 <!-- ===== FIREBASE SDK ===== -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, setDoc, collection,
@@ -2639,8 +2652,18 @@
     }
   }
 
-  // ── Users: add new user ──────────────────────────────────────
-  window.fbAddUser = async function(email, role) {
+  // ── Users: add new user (creates Firebase Auth + Firestore) ──
+  window.fbAddUser = async function(email, role, password) {
+    // สร้าง Firebase Auth account ผ่าน secondary app (ไม่ logout admin)
+    const secondaryApp = initializeApp(firebaseConfig, 'secondary_' + Date.now());
+    const secondaryAuth = getAuth(secondaryApp);
+    try {
+      await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    } finally {
+      await secondaryAuth.signOut().catch(() => {});
+      await deleteApp(secondaryApp).catch(() => {});
+    }
+    // บันทึกลง Firestore
     const newUser = { email, role, addedBy: auth.currentUser?.email || 'admin', date: todayThai() };
     const ref = await addDoc(collection(db, 'appUsers'), newUser);
     return { _id: ref.id, ...newUser };
