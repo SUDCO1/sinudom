@@ -1369,12 +1369,15 @@
   });
 
   /* ===== FLOW CHART ===== */
-  let flowData    = JSON.parse(localStorage.getItem('calendarFlow') || '{}');
+  localStorage.removeItem('calendarFlow');
+  let flowData = {};
   let currentFlowKey = null;
   let flowNavStack   = [];
 
   function saveFlowData() {
-    localStorage.setItem('calendarFlow', JSON.stringify(flowData));
+    if (typeof window.fbSaveFlow === 'function') {
+      window.fbSaveFlow(flowData);
+    }
   }
 
   function getFlowKey(dateKey, noteIdx) {
@@ -2671,6 +2674,17 @@
     await deleteDoc(doc(db, 'appUsers', id));
   };
 
+  window.fbSaveFlow = async function(data) {
+    await setDoc(doc(db, 'settings', 'flowData'), { data: JSON.stringify(data) });
+  };
+
+  async function loadFlow() {
+    const snap = await getDoc(doc(db, 'settings', 'flowData'));
+    if (snap.exists() && typeof flowData !== 'undefined') {
+      try { Object.assign(flowData, JSON.parse(snap.data().data || '{}')); } catch(e) {}
+    }
+  }
+
   let _unsubNotes, _unsubUsers, _unsubRoles;
 
   onAuthStateChanged(auth, user => {
@@ -2678,6 +2692,8 @@
     if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
     if (!user) return;
+
+    loadFlow();
 
     _unsubRoles = onSnapshot(doc(db, 'settings', 'roles'), snap => {
       if (snap.exists()) {
