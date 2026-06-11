@@ -1283,6 +1283,12 @@
 
   function deleteNote(idx) {
     if (!notes[selectedDateKey]) return;
+    const note = notes[selectedDateKey][idx];
+    // Clean up orphaned flow data for this note
+    if (note && note.id) {
+      const fk = getFlowKey(selectedDateKey, note.id);
+      if (flowData[fk]) { delete flowData[fk]; saveFlowData(); }
+    }
     notes[selectedDateKey].splice(idx, 1);
     if (notes[selectedDateKey].length === 0) delete notes[selectedDateKey];
     saveToStorage();
@@ -1298,7 +1304,7 @@
     const time = document.getElementById('timeInput').value || '';
 
     if (!notes[selectedDateKey]) notes[selectedDateKey] = [];
-    notes[selectedDateKey].push({ text, color: selectedColor, time });
+    notes[selectedDateKey].push({ id: 'note_' + Date.now(), text, color: selectedColor, time });
     saveToStorage();
 
     input.value = '';
@@ -1380,8 +1386,8 @@
     }
   }
 
-  function getFlowKey(dateKey, noteIdx) {
-    return `${dateKey}__${noteIdx}`;
+  function getFlowKey(dateKey, noteId) {
+    return `${dateKey}__${noteId}`;
   }
 
   function initFlowIfNeeded(key, rootTitle) {
@@ -1399,8 +1405,14 @@
     const note = notes[selectedDateKey][idx];
     if (!note) return;
 
+    // Migrate old notes that don't have a stable id
+    if (!note.id) {
+      note.id = 'note_' + Date.now() + '_' + idx;
+      saveToStorage();
+    }
+
     flowNavStack = [];  // reset nav
-    currentFlowKey = getFlowKey(selectedDateKey, idx);
+    currentFlowKey = getFlowKey(selectedDateKey, note.id);
     initFlowIfNeeded(currentFlowKey, note.text);
 
     const dateLabel = document.getElementById('modalDateLabel').textContent.replace('📅 ', '');
