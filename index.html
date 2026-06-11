@@ -1143,6 +1143,9 @@
   }
 
   // Load notes from localStorage
+  // ล้าง localStorage เก่าออก (ย้ายไป Firestore แล้ว)
+  localStorage.removeItem('calendarNotes');
+  localStorage.removeItem('calUsers');
   let notes = {};
 
   function saveToStorage() {
@@ -1243,11 +1246,6 @@
     renderModalNotes();
     document.getElementById('noteInput').value = '';
     document.getElementById('timeInput').value = '';
-    selectedColor = '#22c55e'; // reset สีกลับ default
-    // reset color selector UI
-    document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('selected'));
-    const firstDot = document.querySelector('.color-dot');
-    if (firstDot) firstDot.classList.add('selected');
     document.getElementById('modalOverlay').classList.add('open');
     setTimeout(() => document.getElementById('noteInput').focus(), 200);
   }
