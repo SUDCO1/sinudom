@@ -1128,41 +1128,26 @@
     if (pass.length < 6) return alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
     if (users.find(u => u.email === email)) return alert('อีเมลนี้มีอยู่แล้ว');
     if (typeof window.fbAddUser === 'function') {
-      const btn = document.querySelector('[onclick="addUser()"]');
-      if (btn) { btn.disabled = true; btn.textContent = 'กำลังเพิ่ม...'; }
-      window.fbAddUser(email, role, pass).then(newUser => {
+      window.fbAddUser(email, role).then(newUser => {
         users.push(newUser);
-        renderUsers();
-        document.getElementById('newUserEmail').value = '';
-        document.getElementById('newUserPass').value  = '';
-        if (btn) { btn.disabled = false; btn.textContent = '➕ เพิ่ม'; }
-      }).catch(e => {
-        if (btn) { btn.disabled = false; btn.textContent = '➕ เพิ่ม'; }
-        const msgs = {
-          'auth/email-already-in-use': 'อีเมลนี้มีบัญชีอยู่แล้วในระบบ',
-          'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
-          'auth/weak-password': 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
-        };
-        alert(msgs[e.code] || 'เกิดข้อผิดพลาด: ' + e.message);
+            renderUsers();
       });
-      return;
+    } else {
+      const today = new Date();
+      const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
+      users.push({ email, role, addedBy:'admin', date: d });
+        renderUsers();
     }
-    const today = new Date();
-    const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
-    users.push({ email, role, addedBy:'admin', date: d });
-    renderUsers();
     document.getElementById('newUserEmail').value = '';
     document.getElementById('newUserPass').value  = '';
   }
 
   // Load notes from localStorage
-  let notes = {}; // โหลดจาก Firestore
+  let notes = {}; // โหลดจาก Firestore เท่านั้น
 
-  function saveToStorage(dateKey) {
-    // บันทึกเฉพาะ dateKey ที่เปลี่ยนลง Firestore
-    const key = dateKey || selectedDateKey;
-    if (key && typeof window.fbSaveNoteDate === 'function') {
-      window.fbSaveNoteDate(key, notes[key] || []);
+  function saveToStorage() {
+    if (typeof window.fbSaveNoteDate === 'function' && typeof selectedDateKey !== 'undefined') {
+      window.fbSaveNoteDate(selectedDateKey, notes[selectedDateKey] || []);
     }
   }
 
@@ -2510,7 +2495,7 @@
   import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, setDoc, collection,
-    getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp
+    getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -2649,7 +2634,7 @@
     }
   }
 
-  // ── Users: add new user (creates Firebase Auth + Firestore) ──
+  // ── Users: add new user ──────────────────────────────────────
   window.fbAddUser = async function(email, role, password) {
     const secondaryApp = initializeApp(firebaseConfig, 'secondary_' + Date.now());
     const secondaryAuth = getAuth(secondaryApp);
@@ -2660,8 +2645,17 @@
       await deleteApp(secondaryApp).catch(() => {});
     }
     const newUser = { email, role, addedBy: auth.currentUser?.email || 'admin', date: todayThai() };
-    const ref = await addDoc(collection(db, 'appUsers'), newUser);
-    return { _id: ref.id, ...newUser };
+    await addDoc(collection(db, 'appUsers'), newUser);
+  };
+
+  // ── Notes: save one date to Firestore ────────────────────────
+  window.fbSaveNoteDate = async function(dateKey, list) {
+    if (!dateKey) return;
+    if (!list || list.length === 0) {
+      await deleteDoc(doc(db, 'notes', dateKey)).catch(() => {});
+    } else {
+      await setDoc(doc(db, 'notes', dateKey), { list });
+    }
   };
 
   // ── Users: update role ───────────────────────────────────────
@@ -2674,40 +2668,62 @@
     await deleteDoc(doc(db, 'appUsers', id));
   };
 
-  // ── Notes: load all from Firestore ───────────────────────────
-  async function loadNotes() {
-    const snap = await getDocs(collection(db, 'notes'));
-    if (typeof notes !== 'undefined') {
-      snap.forEach(d => { notes[d.id] = d.data().list || []; });
-    }
-  }
+  // ── Real-time listeners (เริ่มหลัง login) ───────────────────
+  let _unsubNotes, _unsubUsers, _unsubRoles;
 
-  // ── Notes: save one date to Firestore ────────────────────────
-  window.fbSaveNoteDate = async function(dateKey, list) {
-    if (list.length === 0) {
-      await deleteDoc(doc(db, 'notes', dateKey));
-    } else {
-      await setDoc(doc(db, 'notes', dateKey), { list });
-    }
-  };
-
-  // ── Init: load everything then refresh UI ────────────────────
-  onAuthStateChanged(auth, async user => {
+  onAuthStateChanged(auth, user => {
+    // ยกเลิก listeners เก่า
+    if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
+    if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
+    if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
     if (!user) return;
-    await loadRoles();
-    await loadPerms();
-    await loadUsers();
-    await loadNotes();
-    // Update role button in navbar
-    if (typeof users !== 'undefined') {
-      const me = users.find(u => u.email === user.email);
+
+    // ── Roles real-time ──
+    _unsubRoles = onSnapshot(doc(db, 'settings', 'roles'), snap => {
+      if (snap.exists()) {
+        const list = snap.data().list || [];
+        if (typeof roles !== 'undefined') {
+          roles.length = 0;
+          list.forEach(r => roles.push(r));
+        }
+      } else {
+        const defaults = [{ name:'Manager', color:'#3b82f6' }, { name:'Sale', color:'#22c55e' }];
+        setDoc(doc(db, 'settings', 'roles'), { list: defaults });
+      }
+      if (typeof renderRoleChips === 'function') renderRoleChips();
+    });
+
+    // ── Users real-time ──
+    _unsubUsers = onSnapshot(collection(db, 'appUsers'), snap => {
+      if (typeof users !== 'undefined') {
+        users.length = 0;
+        snap.forEach(d => users.push({ _id: d.id, ...d.data() }));
+        if (users.length === 0) {
+          // seed admin
+          const newUser = { email: user.email, role:'Admin', addedBy:'system-bootstrap', date: todayThai(), isMe: true };
+          addDoc(collection(db, 'appUsers'), newUser);
+        }
+      }
+      const me = (typeof users !== 'undefined') && users.find(u => u.email === user.email);
       const roleBtn = document.getElementById('navRoleBtn');
       if (me && roleBtn) roleBtn.textContent = me.role || 'User';
-    }
-    if (typeof renderRoleChips === 'function') renderRoleChips();
-    if (typeof renderPermTable === 'function') renderPermTable();
-    if (typeof renderUsers     === 'function') renderUsers();
-    if (typeof renderCalendar  === 'function') renderCalendar();
+      if (typeof renderUsers === 'function') renderUsers();
+    });
+
+    // ── Notes real-time ──
+    _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
+      if (typeof notes !== 'undefined') {
+        // อัพเดทเฉพาะที่เปลี่ยน
+        snap.docChanges().forEach(change => {
+          if (change.type === 'removed') {
+            delete notes[change.doc.id];
+          } else {
+            notes[change.doc.id] = change.doc.data().list || [];
+          }
+        });
+      }
+      if (typeof renderCalendar === 'function') renderCalendar();
+    });
   });
 </script>
 </body>
