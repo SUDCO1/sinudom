@@ -1379,7 +1379,7 @@
   let flowData = {};
   let currentFlowKey = null;
   let flowNavStack   = [];
-  let _flowLoadPromise = Promise.resolve();
+  let _flowReady = false; // true after first onSnapshot for flowData fires
 
   function saveFlowData() {
     if (typeof window.fbSaveFlow === 'function') {
@@ -1398,7 +1398,7 @@
         rootId,
         nodes: { [rootId]: { title: rootTitle, memo: '', rightId: null, downId: null } }
       };
-      // Do NOT saveFlowData() here — avoid overwriting Firestore before loadFlow() completes
+      // Do NOT call saveFlowData() here — avoids overwriting Firestore before snapshot loads
     }
   }
 
@@ -1412,9 +1412,8 @@
       saveToStorage();
     }
 
-    // Wait for loadFlow() to finish before rendering to avoid race condition
-    _flowLoadPromise.then(() => {
-      flowNavStack = [];  // reset nav
+    const _open = () => {
+      flowNavStack = [];
       currentFlowKey = getFlowKey(selectedDateKey, note.id);
       initFlowIfNeeded(currentFlowKey, note.text);
 
@@ -1429,7 +1428,11 @@
 
       flowZoom = 1.0; applyZoom();
       renderFlow();
-    });
+    };
+
+    // Wait for real-time flow snapshot to arrive before opening
+    if (_flowReady) { _open(); }
+    else { const t = setInterval(() => { if (_flowReady) { clearInterval(t); _open(); } }, 50); }
   }
 
   function flowNavBack() {
@@ -2694,22 +2697,31 @@
     await setDoc(doc(db, 'settings', 'flowData'), { data: JSON.stringify(data) });
   };
 
-  async function loadFlow() {
-    const snap = await getDoc(doc(db, 'settings', 'flowData'));
-    if (snap.exists() && typeof flowData !== 'undefined') {
-      try { Object.assign(flowData, JSON.parse(snap.data().data || '{}')); } catch(e) {}
-    }
-  }
-
-  let _unsubNotes, _unsubUsers, _unsubRoles;
+  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubFlow;
 
   onAuthStateChanged(auth, user => {
     if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
     if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
+    if (_unsubFlow)   { _unsubFlow();   _unsubFlow   = null; }
+    _flowReady = false;
     if (!user) return;
 
-    _flowLoadPromise = loadFlow();
+    // Real-time listener for flowData (replaces one-time getDoc)
+    _unsubFlow = onSnapshot(doc(db, 'settings', 'flowData'), snap => {
+      if (snap.exists() && typeof flowData !== 'undefined') {
+        try {
+          const loaded = JSON.parse(snap.data().data || '{}');
+          // Merge loaded data; preserve any in-memory keys not yet saved
+          Object.keys(loaded).forEach(k => { flowData[k] = loaded[k]; });
+        } catch(e) {}
+      }
+      _flowReady = true;
+      // Re-render flow panel if currently open
+      if (currentFlowKey && document.getElementById('flowOverlay').style.opacity === '1') {
+        renderFlow();
+      }
+    });
 
     _unsubRoles = onSnapshot(doc(db, 'settings', 'roles'), snap => {
       if (snap.exists()) {
