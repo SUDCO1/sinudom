@@ -1379,6 +1379,7 @@
   let flowData = {};
   let currentFlowKey = null;
   let flowNavStack   = [];
+  let _flowLoadPromise = Promise.resolve();
 
   function saveFlowData() {
     if (typeof window.fbSaveFlow === 'function') {
@@ -1397,7 +1398,7 @@
         rootId,
         nodes: { [rootId]: { title: rootTitle, memo: '', rightId: null, downId: null } }
       };
-      saveFlowData();
+      // Do NOT saveFlowData() here — avoid overwriting Firestore before loadFlow() completes
     }
   }
 
@@ -1411,21 +1412,24 @@
       saveToStorage();
     }
 
-    flowNavStack = [];  // reset nav
-    currentFlowKey = getFlowKey(selectedDateKey, note.id);
-    initFlowIfNeeded(currentFlowKey, note.text);
+    // Wait for loadFlow() to finish before rendering to avoid race condition
+    _flowLoadPromise.then(() => {
+      flowNavStack = [];  // reset nav
+      currentFlowKey = getFlowKey(selectedDateKey, note.id);
+      initFlowIfNeeded(currentFlowKey, note.text);
 
-    const dateLabel = document.getElementById('modalDateLabel').textContent.replace('📅 ', '');
-    document.getElementById('flowDateLabel').textContent = dateLabel;
+      const dateLabel = document.getElementById('modalDateLabel').textContent.replace('📅 ', '');
+      document.getElementById('flowDateLabel').textContent = dateLabel;
 
-    const overlay = document.getElementById('flowOverlay');
-    const panel   = document.getElementById('flowPanel');
-    overlay.style.opacity = '1';
-    overlay.style.pointerEvents = 'all';
-    panel.style.transform = 'translateY(0)';
+      const overlay = document.getElementById('flowOverlay');
+      const panel   = document.getElementById('flowPanel');
+      overlay.style.opacity = '1';
+      overlay.style.pointerEvents = 'all';
+      panel.style.transform = 'translateY(0)';
 
-    flowZoom = 1.0; applyZoom();
-    renderFlow();
+      flowZoom = 1.0; applyZoom();
+      renderFlow();
+    });
   }
 
   function flowNavBack() {
@@ -2705,7 +2709,7 @@
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
     if (!user) return;
 
-    loadFlow();
+    _flowLoadPromise = loadFlow();
 
     _unsubRoles = onSnapshot(doc(db, 'settings', 'roles'), snap => {
       if (snap.exists()) {
