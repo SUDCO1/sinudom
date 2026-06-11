@@ -1060,7 +1060,6 @@
 
   // ===== SETTINGS: USERS =====
   let users = []; // โหลดจาก Firestore เท่านั้น
-  ];
 
   const roleColors = { Admin:'#f5a623', Manager:'#3b82f6', Sale:'#22c55e' };
   function roleStyle(r) {
@@ -1109,7 +1108,6 @@
     if (u._id && typeof window.fbUpdateUserRole === 'function') {
       window.fbUpdateUserRole(u._id, u.role);
     }
-
     renderUsers();
     alert('บันทึกสิทธิ์ ' + u.email + ' เรียบร้อย');
   }
@@ -1120,7 +1118,6 @@
       window.fbDeleteUser(u._id);
     }
     users.splice(i, 1);
-
     renderUsers();
   }
   function addUser() {
@@ -2650,7 +2647,6 @@
 
   // ── Users: add new user ──────────────────────────────────────
   window.fbAddUser = async function(email, role, password) {
-    // สร้าง Firebase Auth account ผ่าน secondary app (admin ไม่ logout)
     const secondaryApp = initializeApp(firebaseConfig, 'secondary_' + Date.now());
     const secondaryAuth = getAuth(secondaryApp);
     try {
