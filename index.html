@@ -1059,7 +1059,7 @@
   }
 
   // ===== SETTINGS: USERS =====
-  let users = []; // โหลดจาก Firestore เท่านั้น
+  let users = [];
 
   const roleColors = { Admin:'#f5a623', Manager:'#3b82f6', Sale:'#22c55e' };
   function roleStyle(r) {
@@ -1143,10 +1143,10 @@
   }
 
   // Load notes from localStorage
-  let notes = {}; // โหลดจาก Firestore เท่านั้น
+  let notes = {};
 
   function saveToStorage() {
-    if (typeof window.fbSaveNoteDate === 'function' && typeof selectedDateKey !== 'undefined') {
+    if (typeof window.fbSaveNoteDate === 'function' && selectedDateKey) {
       window.fbSaveNoteDate(selectedDateKey, notes[selectedDateKey] || []);
     }
   }
@@ -1242,6 +1242,12 @@
 
     renderModalNotes();
     document.getElementById('noteInput').value = '';
+    document.getElementById('timeInput').value = '';
+    selectedColor = '#22c55e'; // reset สีกลับ default
+    // reset color selector UI
+    document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('selected'));
+    const firstDot = document.querySelector('.color-dot');
+    if (firstDot) firstDot.classList.add('selected');
     document.getElementById('modalOverlay').classList.add('open');
     setTimeout(() => document.getElementById('noteInput').focus(), 200);
   }
@@ -2648,7 +2654,6 @@
     await addDoc(collection(db, 'appUsers'), newUser);
   };
 
-  // ── Notes: save one date to Firestore ────────────────────────
   window.fbSaveNoteDate = async function(dateKey, list) {
     if (!dateKey) return;
     if (!list || list.length === 0) {
@@ -2668,40 +2673,30 @@
     await deleteDoc(doc(db, 'appUsers', id));
   };
 
-  // ── Real-time listeners (เริ่มหลัง login) ───────────────────
   let _unsubNotes, _unsubUsers, _unsubRoles;
 
   onAuthStateChanged(auth, user => {
-    // ยกเลิก listeners เก่า
     if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
     if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
     if (!user) return;
 
-    // ── Roles real-time ──
     _unsubRoles = onSnapshot(doc(db, 'settings', 'roles'), snap => {
       if (snap.exists()) {
         const list = snap.data().list || [];
-        if (typeof roles !== 'undefined') {
-          roles.length = 0;
-          list.forEach(r => roles.push(r));
-        }
+        if (typeof roles !== 'undefined') { roles.length = 0; list.forEach(r => roles.push(r)); }
       } else {
-        const defaults = [{ name:'Manager', color:'#3b82f6' }, { name:'Sale', color:'#22c55e' }];
-        setDoc(doc(db, 'settings', 'roles'), { list: defaults });
+        setDoc(doc(db, 'settings', 'roles'), { list: [{ name:'Manager', color:'#3b82f6' }, { name:'Sale', color:'#22c55e' }] });
       }
       if (typeof renderRoleChips === 'function') renderRoleChips();
     });
 
-    // ── Users real-time ──
     _unsubUsers = onSnapshot(collection(db, 'appUsers'), snap => {
       if (typeof users !== 'undefined') {
         users.length = 0;
         snap.forEach(d => users.push({ _id: d.id, ...d.data() }));
         if (users.length === 0) {
-          // seed admin
-          const newUser = { email: user.email, role:'Admin', addedBy:'system-bootstrap', date: todayThai(), isMe: true };
-          addDoc(collection(db, 'appUsers'), newUser);
+          addDoc(collection(db, 'appUsers'), { email: user.email, role:'Admin', addedBy:'system-bootstrap', date: todayThai(), isMe: true });
         }
       }
       const me = (typeof users !== 'undefined') && users.find(u => u.email === user.email);
@@ -2710,16 +2705,11 @@
       if (typeof renderUsers === 'function') renderUsers();
     });
 
-    // ── Notes real-time ──
     _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
       if (typeof notes !== 'undefined') {
-        // อัพเดทเฉพาะที่เปลี่ยน
         snap.docChanges().forEach(change => {
-          if (change.type === 'removed') {
-            delete notes[change.doc.id];
-          } else {
-            notes[change.doc.id] = change.doc.data().list || [];
-          }
+          if (change.type === 'removed') { delete notes[change.doc.id]; }
+          else { notes[change.doc.id] = change.doc.data().list || []; }
         });
       }
       if (typeof renderCalendar === 'function') renderCalendar();
