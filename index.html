@@ -49,6 +49,46 @@
     }
     .btn-logout:hover { background: rgba(255,255,255,0.25); }
 
+    /* ===== LOGIN OVERLAY ===== */
+    #loginOverlay {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #1a3a6b 0%, #1e4d8c 60%, #2563a8 100%);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .login-card {
+      background: white; border-radius: 16px;
+      padding: 40px 36px; width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    .login-logo {
+      text-align: center; margin-bottom: 28px;
+    }
+    .login-logo .icon { font-size: 40px; margin-bottom: 8px; }
+    .login-logo h2 { font-size: 20px; font-weight: 700; color: #1a3a6b; }
+    .login-logo p { font-size: 13px; color: #6b7280; margin-top: 4px; }
+.login-field { margin-bottom: 16px; }
+    .login-field label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .login-field input {
+      width: 100%; border: 1.5px solid #d1d5db; border-radius: 8px;
+      padding: 10px 14px; font-size: 14px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .login-field input:focus { border-color: #1a3a6b; }
+    .btn-login {
+      width: 100%; background: linear-gradient(135deg, #1a3a6b, #1e4d8c);
+      color: white; border: none; border-radius: 8px;
+      padding: 12px; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+    }
+    .btn-login:hover { opacity: 0.9; }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-error {
+      background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+      border-radius: 8px; padding: 10px 14px; font-size: 13px;
+      margin-bottom: 16px; display: none;
+    }
+
     /* ===== SIDEBAR ===== */
     .layout { display: flex; height: calc(100vh - 64px); }
     .sidebar {
@@ -498,18 +538,40 @@
 </head>
 <body>
 
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">📅</div>
+      <h2>ปฏิทินจดโน้ต</h2>
+      <p>Sinudom Note Calendar</p>
+    </div>
+    <div id="loginError" class="login-error"></div>
+    <div class="login-field">
+      <label>อีเมล</label>
+      <input type="email" id="loginEmail" placeholder="example@email.com" />
+    </div>
+    <div class="login-field">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="loginPassword" placeholder="รหัสผ่าน" />
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
 <!-- NAVBAR -->
+<div id="mainApp" style="display:none;">
 <div class="navbar">
   <div class="navbar-brand">
     <div class="navbar-icon">📅</div>
     <div>
       <div class="navbar-title">ปฏิทินจดโน้ต</div>
-      <div class="navbar-subtitle">Note Calendar · admin@demo.com</div>
+      <div class="navbar-subtitle" id="navSubtitle">Note Calendar</div>
     </div>
   </div>
   <div class="navbar-actions">
-    <button class="btn-admin">Admin</button>
-    <button class="btn-logout">ออกจากระบบ</button>
+    <button class="btn-admin" id="navRoleBtn">Admin</button>
+    <button class="btn-logout" id="btnLogout">ออกจากระบบ</button>
   </div>
 </div>
 
@@ -2431,10 +2493,11 @@
   })();
 
 </script>
+</div><!-- /mainApp -->
 <!-- ===== FIREBASE SDK ===== -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, setDoc, collection,
     getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp
@@ -2455,21 +2518,59 @@
   const auth = getAuth(app);
   const db   = getFirestore(app);
 
+  // ── Login ────────────────────────────────────────────────────
+  window.doLogin = async function() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl    = document.getElementById('loginError');
+    const btn      = document.getElementById('btnLogin');
+    errEl.style.display = 'none';
+
+    if (!email || !password) { showErr('กรุณากรอกอีเมลและรหัสผ่าน'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'กำลังเข้าสู่ระบบ...';
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'เข้าสู่ระบบ';
+      const msgs = {
+        'auth/user-not-found': 'ไม่พบบัญชีนี้ในระบบ',
+        'auth/wrong-password': 'รหัสผ่านไม่ถูกต้อง',
+        'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+        'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
+        'auth/too-many-requests': 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่',
+      };
+      showErr(msgs[e.code] || ('เกิดข้อผิดพลาด: ' + e.message));
+    }
+    function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  };
+
+  // Enter key to submit
+  ['loginEmail','loginPassword'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') window.doLogin(); });
+  });
+
   // ── Auth state ──────────────────────────────────────────────
   onAuthStateChanged(auth, user => {
-    const subtitleEl = document.querySelector('.navbar-subtitle');
     if (user) {
-      if (subtitleEl) subtitleEl.textContent = 'Note Calendar · ' + user.email;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('mainApp').style.display = '';
+      const subtitle = document.getElementById('navSubtitle');
+      if (subtitle) subtitle.textContent = 'Note Calendar · ' + user.email;
+      const roleBtn = document.getElementById('navRoleBtn');
+      // role will be updated after loadUsers
+    } else {
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('mainApp').style.display = 'none';
     }
   });
 
   // ── Logout ──────────────────────────────────────────────────
-  document.querySelector('.btn-logout').addEventListener('click', () => {
-    signOut(auth).then(() => {
-      window.location.href = 'index.html';
-    }).catch(() => {
-      alert('ออกจากระบบไม่สำเร็จ');
-    });
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    signOut(auth).catch(() => alert('ออกจากระบบไม่สำเร็จ'));
   });
 
   // ── Helpers ─────────────────────────────────────────────────
@@ -2561,6 +2662,12 @@
     await loadRoles();
     await loadPerms();
     await loadUsers();
+    // Update role button in navbar
+    if (typeof users !== 'undefined') {
+      const me = users.find(u => u.email === user.email);
+      const roleBtn = document.getElementById('navRoleBtn');
+      if (me && roleBtn) roleBtn.textContent = me.role || 'User';
+    }
     if (typeof renderRoleChips === 'function') renderRoleChips();
     if (typeof renderPermTable === 'function') renderPermTable();
     if (typeof renderUsers     === 'function') renderUsers();
