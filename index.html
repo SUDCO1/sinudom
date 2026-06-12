@@ -727,6 +727,23 @@
           </div>
         </div>
       </div>
+
+      <!-- จัดการเสา -->
+      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;margin-top:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">🏗️ จัดการเสา</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">เพิ่ม / ลบ / เรียงลำดับ รายการเสา</div>
+          </div>
+        </div>
+        <div id="saoListUI" style="margin-bottom:16px;min-height:40px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input id="newSaoInput" type="text" placeholder="ชื่อเสา..." maxlength="50"
+            style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;"
+            onkeydown="if(event.key==='Enter') addSao()" />
+          <button onclick="addSao()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">➕ เพิ่ม</button>
+        </div>
+      </div>
     </div>
 
     <!-- ===== CALENDAR VIEW ===== -->
@@ -769,16 +786,11 @@
       <div class="add-note-section">
         <div class="add-note-label">➕ เพิ่มโน้ตใหม่</div>
         <div class="input-row">
-          <div class="input-group">
-            <span class="input-label">📝 รายละเอียด</span>
-            <input
-              class="input-field"
-              id="noteInput"
-              type="text"
-              placeholder="พิมพ์โน้ต..."
-              maxlength="80"
-              onkeydown="if(event.key==='Enter') saveNote()"
-            />
+          <div class="input-group" style="flex:1.2">
+            <span class="input-label">🏗️ เสา</span>
+            <select class="input-field" id="saoSelect" style="cursor:pointer;">
+              <option value="">-- เลือกเสา --</option>
+            </select>
           </div>
           <div class="input-group time-group">
             <span class="input-label">🕐 เวลา</span>
@@ -786,6 +798,19 @@
               class="input-field"
               id="timeInput"
               type="time"
+            />
+          </div>
+        </div>
+        <div class="input-row" style="margin-top:6px;">
+          <div class="input-group">
+            <span class="input-label">📝 รายละเอียด</span>
+            <input
+              class="input-field"
+              id="noteInput"
+              type="text"
+              placeholder="พิมพ์รายละเอียด..."
+              maxlength="80"
+              onkeydown="if(event.key==='Enter') saveNote()"
             />
           </div>
         </div>
@@ -978,7 +1003,7 @@
     document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
     document.getElementById('nav-calendar').classList.toggle('active', view === 'calendar');
     document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
-    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); }
+    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); }
   }
 
   // ===== SETTINGS: PERMISSIONS =====
@@ -1299,8 +1324,11 @@
     document.getElementById('modalDateLabel').textContent = '📅 ' + label;
 
     renderModalNotes();
+    renderSaoDropdown();
     document.getElementById('noteInput').value = '';
     document.getElementById('timeInput').value = '';
+    const saoEl = document.getElementById('saoSelect');
+    if (saoEl) saoEl.value = '';
     document.getElementById('modalOverlay').classList.add('open');
     setTimeout(() => document.getElementById('noteInput').focus(), 200);
   }
@@ -1325,9 +1353,12 @@
       const timeHtml = note.time
         ? `<span class="note-row-time">🕐 ${escHtml(note.time)}</span>`
         : '';
+      const titleHtml = note.sao
+        ? `<div class="note-row-text">${escHtml(note.sao)}</div>${note.text ? `<div style="font-size:11px;color:#6b7280;margin-top:1px;">${escHtml(note.text)}</div>` : ''}`
+        : `<div class="note-row-text">${escHtml(note.text)}</div>`;
       row.innerHTML = `
         <div class="note-row-dot" style="background:${c.dot}"></div>
-        <div class="note-row-text">${escHtml(note.text)}</div>
+        <div style="flex:1;min-width:0;">${titleHtml}</div>
         ${timeHtml}
         <button class="note-row-delete" title="ลบ" onclick="deleteNote(${note._idx})">🗑</button>
         <button class="note-row-goto" onclick="openNoteDetail(${note._idx})">เข้าไป ▶</button>
@@ -1354,18 +1385,140 @@
   function saveNote() {
     const input = document.getElementById('noteInput');
     const text = input.value.trim();
-    if (!text) return;
+    const saoEl = document.getElementById('saoSelect');
+    const sao = saoEl ? saoEl.value.trim() : '';
+    if (!sao && !text) return;
 
     const time = document.getElementById('timeInput').value || '';
 
     if (!notes[selectedDateKey]) notes[selectedDateKey] = [];
-    notes[selectedDateKey].push({ id: 'note_' + Date.now(), text, color: selectedColor, time });
+    notes[selectedDateKey].push({ id: 'note_' + Date.now(), text: sao || text, sao, detail: text, color: selectedColor, time });
     saveToStorage();
 
     input.value = '';
     document.getElementById('timeInput').value = '';
+    if (saoEl) saoEl.value = '';
     renderModalNotes();
     renderCalendar();
+  }
+
+  /* ===== เสา ===== */
+  function getSaoList() {
+    try { return JSON.parse(localStorage.getItem('saoList') || '[]'); } catch(e) { return []; }
+  }
+  function saveSaoList(list) {
+    localStorage.setItem('saoList', JSON.stringify(list));
+  }
+  function renderSaoDropdown() {
+    const sel = document.getElementById('saoSelect');
+    if (!sel) return;
+    const list = getSaoList();
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">-- เลือกเสา --</option>';
+    list.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      if (s === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  function renderSaoListUI() {
+    const container = document.getElementById('saoListUI');
+    if (!container) return;
+    const list = getSaoList();
+    if (list.length === 0) {
+      container.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px 0;">ยังไม่มีรายการเสา</div>';
+      return;
+    }
+    container.innerHTML = '';
+    list.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.dataset.idx = i;
+      row.draggable = true;
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;background:#f9fafb;cursor:grab;user-select:none;touch-action:none;';
+      row.innerHTML = `
+        <span style="color:#9ca3af;font-size:16px;padding:0 4px;">⠿</span>
+        <span style="flex:1;font-size:13px;">${escHtml(s)}</span>
+        <button onclick="deleteSao(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>
+      `;
+      // Drag events
+      row.addEventListener('dragstart', e => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', i);
+        row.style.opacity = '0.4';
+      });
+      row.addEventListener('dragend', () => { row.style.opacity = '1'; });
+      row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.style.background = '#e0e7ff'; });
+      row.addEventListener('dragleave', () => { row.style.background = '#f9fafb'; });
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        const from = parseInt(e.dataTransfer.getData('text/plain'));
+        const to = i;
+        if (from === to) { row.style.background = '#f9fafb'; return; }
+        const arr = getSaoList();
+        const [item] = arr.splice(from, 1);
+        arr.splice(to, 0, item);
+        saveSaoList(arr);
+        renderSaoListUI();
+        renderSaoDropdown();
+      });
+      // Touch drag
+      let touchFrom = null, touchClone = null;
+      row.addEventListener('touchstart', e => {
+        touchFrom = i;
+        const t = e.touches[0];
+        touchClone = row.cloneNode(true);
+        touchClone.style.cssText += ';position:fixed;opacity:0.8;pointer-events:none;z-index:9999;width:' + row.offsetWidth + 'px;';
+        touchClone.style.left = t.clientX - row.offsetWidth/2 + 'px';
+        touchClone.style.top = t.clientY - 20 + 'px';
+        document.body.appendChild(touchClone);
+        row.style.opacity = '0.4';
+        e.preventDefault();
+      }, {passive:false});
+      row.addEventListener('touchmove', e => {
+        if (!touchClone) return;
+        const t = e.touches[0];
+        touchClone.style.left = t.clientX - row.offsetWidth/2 + 'px';
+        touchClone.style.top = t.clientY - 20 + 'px';
+        e.preventDefault();
+      }, {passive:false});
+      row.addEventListener('touchend', e => {
+        if (touchClone) { document.body.removeChild(touchClone); touchClone = null; }
+        row.style.opacity = '1';
+        const t = e.changedTouches[0];
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        const targetRow = el ? el.closest('[data-idx]') : null;
+        if (targetRow) {
+          const to = parseInt(targetRow.dataset.idx);
+          if (to !== touchFrom) {
+            const arr = getSaoList();
+            const [item] = arr.splice(touchFrom, 1);
+            arr.splice(to, 0, item);
+            saveSaoList(arr);
+            renderSaoListUI();
+            renderSaoDropdown();
+          }
+        }
+      });
+      container.appendChild(row);
+    });
+  }
+  function addSao() {
+    const inp = document.getElementById('newSaoInput');
+    const val = inp ? inp.value.trim() : '';
+    if (!val) return;
+    const list = getSaoList();
+    if (!list.includes(val)) { list.push(val); saveSaoList(list); }
+    if (inp) inp.value = '';
+    renderSaoListUI();
+    renderSaoDropdown();
+  }
+  function deleteSao(idx) {
+    const list = getSaoList();
+    list.splice(idx, 1);
+    saveSaoList(list);
+    renderSaoListUI();
+    renderSaoDropdown();
   }
 
   /* ===== ZOOM ===== */
@@ -2851,6 +3004,7 @@
       const roleBtn = document.getElementById('navRoleBtn');
       if (me && roleBtn) roleBtn.textContent = me.role || 'User';
       if (typeof renderUsers === 'function') renderUsers();
+      if (typeof renderSaoListUI === 'function') renderSaoListUI();
     });
 
     _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
