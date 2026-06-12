@@ -727,23 +727,6 @@
           </div>
         </div>
       </div>
-
-      <!-- จัดการเสา -->
-      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;margin-top:24px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div>
-            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">🏛️ จัดการเสา</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:2px;">ตัวเลือก Dropdown "เสา" ในฟอร์มเพิ่มโน้ต</div>
-          </div>
-        </div>
-        <div id="saoListUI" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <input id="newSaoInput" type="text" placeholder="ชื่อเสาใหม่ เช่น เสา A1"
-            style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;"
-            onkeydown="if(event.key==='Enter') addSao()" />
-          <button onclick="addSao()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;">➕ เพิ่ม</button>
-        </div>
-      </div>
     </div>
 
     <!-- ===== CALENDAR VIEW ===== -->
@@ -786,11 +769,16 @@
       <div class="add-note-section">
         <div class="add-note-label">➕ เพิ่มโน้ตใหม่</div>
         <div class="input-row">
-          <div class="input-group" style="flex:1;">
-            <span class="input-label">🏛️ เสา</span>
-            <select id="saoSelect" class="input-field" style="cursor:pointer;">
-              <option value="">— ไม่ระบุ —</option>
-            </select>
+          <div class="input-group">
+            <span class="input-label">📝 รายละเอียด</span>
+            <input
+              class="input-field"
+              id="noteInput"
+              type="text"
+              placeholder="พิมพ์โน้ต..."
+              maxlength="80"
+              onkeydown="if(event.key==='Enter') saveNote()"
+            />
           </div>
           <div class="input-group time-group">
             <span class="input-label">🕐 เวลา</span>
@@ -798,19 +786,6 @@
               class="input-field"
               id="timeInput"
               type="time"
-            />
-          </div>
-        </div>
-        <div class="input-row" style="margin-top:8px;">
-          <div class="input-group" style="flex:1;">
-            <span class="input-label">📝 รายละเอียด</span>
-            <input
-              class="input-field"
-              id="noteInput"
-              type="text"
-              placeholder="พิมพ์รายละเอียด..."
-              maxlength="80"
-              onkeydown="if(event.key==='Enter') saveNote()"
             />
           </div>
         </div>
@@ -1003,7 +978,7 @@
     document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
     document.getElementById('nav-calendar').classList.toggle('active', view === 'calendar');
     document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
-    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); }
+    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); }
   }
 
   // ===== SETTINGS: PERMISSIONS =====
@@ -1324,7 +1299,6 @@
     document.getElementById('modalDateLabel').textContent = '📅 ' + label;
 
     renderModalNotes();
-    renderSaoDropdown();
     document.getElementById('noteInput').value = '';
     document.getElementById('timeInput').value = '';
     document.getElementById('modalOverlay').classList.add('open');
@@ -1351,15 +1325,9 @@
       const timeHtml = note.time
         ? `<span class="note-row-time">🕐 ${escHtml(note.time)}</span>`
         : '';
-      const detailHtml = note.detail
-        ? `<div style="font-size:11px;color:#64748b;margin-top:1px;">${escHtml(note.detail)}</div>`
-        : '';
       row.innerHTML = `
         <div class="note-row-dot" style="background:${c.dot}"></div>
-        <div class="note-row-text" style="display:flex;flex-direction:column;gap:1px;">
-          <span>${escHtml(note.text)}</span>
-          ${detailHtml}
-        </div>
+        <div class="note-row-text">${escHtml(note.text)}</div>
         ${timeHtml}
         <button class="note-row-delete" title="ลบ" onclick="deleteNote(${note._idx})">🗑</button>
         <button class="note-row-goto" onclick="openNoteDetail(${note._idx})">เข้าไป ▶</button>
@@ -1384,134 +1352,20 @@
   }
 
   function saveNote() {
-    const sao    = document.getElementById('saoSelect').value.trim();
-    const detail = document.getElementById('noteInput').value.trim();
-    // ต้องเลือกเสาอย่างน้อย
-    if (!sao) { alert('กรุณาเลือกเสา'); return; }
+    const input = document.getElementById('noteInput');
+    const text = input.value.trim();
+    if (!text) return;
 
     const time = document.getElementById('timeInput').value || '';
-    // text (ชื่อหลัก) = ชื่อเสา, detail = รายละเอียดเสริม
-    const text = sao;
 
     if (!notes[selectedDateKey]) notes[selectedDateKey] = [];
-    notes[selectedDateKey].push({ id: 'note_' + Date.now(), text, color: selectedColor, time, sao, detail });
+    notes[selectedDateKey].push({ id: 'note_' + Date.now(), text, color: selectedColor, time });
     saveToStorage();
 
-    document.getElementById('noteInput').value = '';
+    input.value = '';
     document.getElementById('timeInput').value = '';
-    document.getElementById('saoSelect').value = '';
     renderModalNotes();
     renderCalendar();
-  }
-
-  // ── Sao management ──
-  function getSaoList() { return JSON.parse(localStorage.getItem('saoList') || '[]'); }
-  function saveSaoList(list) { localStorage.setItem('saoList', JSON.stringify(list)); }
-
-  function renderSaoDropdown() {
-    const sel = document.getElementById('saoSelect');
-    if (!sel) return;
-    const list = getSaoList();
-    sel.innerHTML = '<option value="">— ไม่ระบุ —</option>' +
-      list.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
-  }
-
-  let _saoDragIdx = null;
-
-  function renderSaoListUI() {
-    const container = document.getElementById('saoListUI');
-    if (!container) return;
-    const list = getSaoList();
-    if (!list.length) {
-      container.innerHTML = '<div style="color:#94a3b8;font-size:13px;font-style:italic;">ยังไม่มีเสา — เพิ่มด้านล่าง</div>';
-      return;
-    }
-    container.innerHTML = list.map((s, i) => `
-      <div class="sao-row" draggable="true" data-idx="${i}"
-        style="display:flex;align-items:center;gap:10px;padding:9px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;cursor:grab;user-select:none;transition:opacity 0.15s;">
-        <span style="color:#cbd5e1;font-size:18px;line-height:1;flex-shrink:0;">⠿</span>
-        <span style="flex:1;font-size:14px;color:#1e293b;">🏛️ ${escHtml(s)}</span>
-        <button onclick="event.stopPropagation();deleteSao(${i})" style="background:#fee2e2;border:1.5px solid #fca5a5;color:#dc2626;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">ลบ</button>
-      </div>`).join('');
-
-    // Drag-and-drop events
-    container.querySelectorAll('.sao-row').forEach(row => {
-      row.addEventListener('dragstart', e => {
-        _saoDragIdx = +row.dataset.idx;
-        row.style.opacity = '0.4';
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      row.addEventListener('dragend', () => { row.style.opacity = '1'; });
-      row.addEventListener('dragover', e => {
-        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
-        row.style.borderColor = '#6366f1';
-      });
-      row.addEventListener('dragleave', () => { row.style.borderColor = '#e5e7eb'; });
-      row.addEventListener('drop', e => {
-        e.preventDefault();
-        row.style.borderColor = '#e5e7eb';
-        const toIdx = +row.dataset.idx;
-        if (_saoDragIdx === null || _saoDragIdx === toIdx) return;
-        const list = getSaoList();
-        const [moved] = list.splice(_saoDragIdx, 1);
-        list.splice(toIdx, 0, moved);
-        saveSaoList(list);
-        renderSaoListUI();
-      });
-
-      // Touch drag (mobile)
-      let touchStartY = 0, touchRowH = 0;
-      row.addEventListener('touchstart', e => {
-        _saoDragIdx = +row.dataset.idx;
-        touchStartY = e.touches[0].clientY;
-        touchRowH = row.offsetHeight + 8;
-        row.style.opacity = '0.5';
-      }, { passive: true });
-      row.addEventListener('touchmove', e => {
-        e.preventDefault();
-        const dy = e.touches[0].clientY - touchStartY;
-        const steps = Math.round(dy / touchRowH);
-        const list = getSaoList();
-        const newIdx = Math.max(0, Math.min(list.length - 1, _saoDragIdx + steps));
-        container.querySelectorAll('.sao-row').forEach(r => r.style.borderColor = '#e5e7eb');
-        const target = container.querySelector(`.sao-row[data-idx="${newIdx}"]`);
-        if (target && newIdx !== _saoDragIdx) target.style.borderColor = '#6366f1';
-      }, { passive: false });
-      row.addEventListener('touchend', e => {
-        row.style.opacity = '1';
-        container.querySelectorAll('.sao-row').forEach(r => r.style.borderColor = '#e5e7eb');
-        const dy = e.changedTouches[0].clientY - touchStartY;
-        const steps = Math.round(dy / touchRowH);
-        if (steps !== 0) {
-          const list = getSaoList();
-          const toIdx = Math.max(0, Math.min(list.length - 1, _saoDragIdx + steps));
-          const [moved] = list.splice(_saoDragIdx, 1);
-          list.splice(toIdx, 0, moved);
-          saveSaoList(list);
-          renderSaoListUI();
-        }
-        _saoDragIdx = null;
-      }, { passive: true });
-    });
-  }
-
-  function addSao() {
-    const input = document.getElementById('newSaoInput');
-    const name = input.value.trim();
-    if (!name) return;
-    const list = getSaoList();
-    if (list.includes(name)) { alert('มีชื่อนี้อยู่แล้ว'); return; }
-    list.push(name);
-    saveSaoList(list);
-    input.value = '';
-    renderSaoListUI();
-  }
-
-  function deleteSao(idx) {
-    const list = getSaoList();
-    list.splice(idx, 1);
-    saveSaoList(list);
-    renderSaoListUI();
   }
 
   /* ===== ZOOM ===== */
@@ -1678,6 +1532,13 @@
   function flowNavBack() {
     closeFlow();
   }
+
+  // Esc key closes flow overlay
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('flowOverlay').classList.contains('open')) {
+      closeFlow();
+    }
+  });
 
   function closeFlow() {
     document.getElementById('flowOverlay').classList.remove('open');
@@ -2123,14 +1984,7 @@
           { id: 'tpl_test_time',    label: '🕐 เวลาเทส',   type: 'time', placeholder: '', unit: '', flex: 1 },
         ],
         [
-          { id: 'tpl_age', label: '📆 อายุ', type: 'number', placeholder: 'คำนวณอัตโนมัติ', unit: 'วัน', flex: 1,
-            compute: (vals) => {
-              const d1 = vals['tpl_collect_date'], d2 = vals['tpl_test_date'];
-              if (!d1 || !d2) return '';
-              const diff = Math.round((new Date(d2) - new Date(d1)) / 86400000);
-              return diff >= 0 ? String(diff) : '';
-            }
-          },
+          { id: 'tpl_age', label: '📆 อายุ', type: 'number', placeholder: '0', unit: 'วัน', flex: 1 },
         ],
         [
           { id: 'tpl_newton', label: '⚖️ นิวตัน', type: 'number', placeholder: '0', unit: 'N', flex: 1 },
@@ -2299,27 +2153,37 @@
         // Determine value: saved → compute → defaultToday
         let val = savedValues?.[f.id] ?? '';
         if (f.compute && !val) val = f.compute(savedValues || {});
-        if (!val && f.defaultToday && ctxDate) val = ctxDate;
-
-        // Extra attrs for date fields with lockMonth
-        let extraAttrs = '';
-        if (f.type === 'date' && f.lockMonth && monthMin) {
-          extraAttrs = `min="${monthMin}" max="${monthMax}"`;
+        // defaultToday: format as DD/MM/YYYY (Thai style, locale-independent)
+        if (!val && f.defaultToday && ctxDate) {
+          if (f.type === 'date') {
+            const [y, m, d] = ctxDate.split('-');
+            val = `${d}/${m}/${y}`;
+          } else {
+            val = ctxDate;
+          }
         }
+        // Convert stored YYYY-MM-DD → DD/MM/YYYY for date fields (migrate old data)
+        if (f.type === 'date' && val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+          const [y, m, d] = val.split('-');
+          val = `${d}/${m}/${y}`;
+        }
+
+        // Render date fields as text inputs with DD/MM/YYYY placeholder
+        const inputType = f.type === 'date' ? 'text' : f.type;
+        const inputPlaceholder = f.type === 'date' ? 'วว/ดด/ปปปป' : (f.placeholder || '');
 
         const unitHtml = f.unit ? `<span style="font-size:12px;color:#6b7280;margin-left:5px;white-space:nowrap;">${f.unit}</span>` : '';
         const roStyle = f.readOnly ? 'background:#f1f5f9;color:#64748b;border-color:#cbd5e1;cursor:default;' : '';
         cell.innerHTML = `
           <label style="font-size:11px;font-weight:600;color:#374151;">${f.label}</label>
           <div style="display:flex;align-items:center;">
-            <input id="${f.id}" type="${f.type}" placeholder="${f.placeholder||''}"
+            <input id="${f.id}" type="${inputType}" placeholder="${inputPlaceholder}"
               value="${escHtml(String(val))}"
-              ${extraAttrs}
-              ${f.type === 'date' ? 'lang="th"' : ''}
               ${f.readOnly ? 'readonly' : ''}
+              ${f.type === 'date' ? 'inputmode="numeric" maxlength="10"' : ''}
               style="${inputStyle}${roStyle}"
               onfocus="${f.readOnly ? '' : "this.style.borderColor='#1a3a6b'"}" onblur="${f.readOnly ? '' : "this.style.borderColor='#3b82f6'"}"
-              oninput="onTemplateInput('${title}')"/>
+              oninput="${f.type === 'date' ? `autoFormatDate(this);` : ''}onTemplateInput('${title}')"/>
             ${unitHtml}
           </div>
         `;
@@ -2328,6 +2192,15 @@
 
       container.appendChild(rowDiv);
     });
+  }
+
+  // Auto-insert slashes while typing DD/MM/YYYY
+  function autoFormatDate(el) {
+    let v = el.value.replace(/[^\d]/g, '');
+    if (v.length > 8) v = v.slice(0, 8);
+    if (v.length >= 5) v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+    else if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2);
+    el.value = v;
   }
 
   function onTemplateInput(title) {
@@ -2978,7 +2851,6 @@
       const roleBtn = document.getElementById('navRoleBtn');
       if (me && roleBtn) roleBtn.textContent = me.role || 'User';
       if (typeof renderUsers === 'function') renderUsers();
-      if (typeof renderSaoListUI === 'function') renderSaoListUI();
     });
 
     _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
