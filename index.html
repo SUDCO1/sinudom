@@ -1128,10 +1128,9 @@
     if (pass.length < 6) return alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
     if (users.find(u => u.email === email)) return alert('อีเมลนี้มีอยู่แล้ว');
     if (typeof window.fbAddUser === 'function') {
-      window.fbAddUser(email, role).then(newUser => {
-        users.push(newUser);
-            renderUsers();
-      });
+      window.fbAddUser(email, role, pass).then(newUser => {
+        if (newUser) { users.push(newUser); renderUsers(); }
+      }).catch(err => alert('เพิ่มผู้ใช้ไม่สำเร็จ: ' + (err.message || err)));
     } else {
       const today = new Date();
       const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
@@ -1379,7 +1378,7 @@
   let flowData = {};
   let currentFlowKey = null;
   let flowNavStack   = [];
-  let _flowReady = false; // true after first onSnapshot for flowData fires
+  let _flowReady = false;
 
   function saveFlowData() {
     if (typeof window.fbSaveFlow === 'function') {
@@ -1398,7 +1397,7 @@
         rootId,
         nodes: { [rootId]: { title: rootTitle, memo: '', rightId: null, downId: null } }
       };
-      // Do NOT call saveFlowData() here — avoids overwriting Firestore before snapshot loads
+      // Do NOT saveFlowData() here - avoids overwriting Firestore before snapshot loads
     }
   }
 
@@ -1430,7 +1429,6 @@
       renderFlow();
     };
 
-    // Wait for real-time flow snapshot to arrive before opening
     if (_flowReady) { _open(); }
     else { const t = setInterval(() => { if (_flowReady) { clearInterval(t); _open(); } }, 50); }
   }
@@ -2074,6 +2072,7 @@
             <input id="${f.id}" type="${f.type}" placeholder="${f.placeholder||''}"
               value="${escHtml(String(val))}"
               ${extraAttrs}
+              ${f.type === 'date' ? 'lang="th"' : ''}
               ${f.readOnly ? 'readonly' : ''}
               style="${inputStyle}${roStyle}"
               onfocus="${f.readOnly ? '' : "this.style.borderColor='#1a3a6b'"}" onblur="${f.readOnly ? '' : "this.style.borderColor='#3b82f6'"}"
@@ -2092,11 +2091,11 @@
     const tpl = TITLE_TEMPLATES[title];
     if (!tpl) return;
     const vals = getTemplateFieldValues(title);
-    // Re-compute computed fields
+    // Re-compute computed fields (skip field user is currently editing)
     tpl.rows.flat().forEach(f => {
       if (!f.compute) return;
       const el = document.getElementById(f.id);
-      if (!el) return;
+      if (!el || document.activeElement === el) return;
       const computed = f.compute(vals);
       if (computed !== '') el.value = computed;
     });
@@ -2671,7 +2670,8 @@
       await deleteApp(secondaryApp).catch(() => {});
     }
     const newUser = { email, role, addedBy: auth.currentUser?.email || 'admin', date: todayThai() };
-    await addDoc(collection(db, 'appUsers'), newUser);
+    const ref = await addDoc(collection(db, 'appUsers'), newUser);
+    return { _id: ref.id, ...newUser }; // return so addUser() can push to local array
   };
 
   window.fbSaveNoteDate = async function(dateKey, list) {
@@ -2707,17 +2707,16 @@
     _flowReady = false;
     if (!user) return;
 
-    // Real-time listener for flowData (replaces one-time getDoc)
+    // Real-time listener (replaces one-time getDoc)
     _unsubFlow = onSnapshot(doc(db, 'settings', 'flowData'), snap => {
       if (snap.exists() && typeof flowData !== 'undefined') {
         try {
           const loaded = JSON.parse(snap.data().data || '{}');
-          // Merge loaded data; preserve any in-memory keys not yet saved
           Object.keys(loaded).forEach(k => { flowData[k] = loaded[k]; });
         } catch(e) {}
       }
       _flowReady = true;
-      // Re-render flow panel if currently open
+      // Re-render if flow panel is open
       if (currentFlowKey && document.getElementById('flowOverlay').style.opacity === '1') {
         renderFlow();
       }
