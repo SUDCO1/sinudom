@@ -337,7 +337,6 @@
     }
     .date-jump-input:focus { border-color: #1a3a6b; }
 
-
     /* ===== USER CARDS (mobile) ===== */
     .user-table-wrap { overflow-x: auto; }
     @media (max-width: 768px) {
@@ -348,18 +347,13 @@
         background: white; border: 1px solid #e5e7eb; border-radius: 10px;
         margin-bottom: 10px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
       }
-      .user-table-wrap td {
-        padding: 3px 0 !important; border: none !important;
-        font-size: 13px !important;
-      }
+      .user-table-wrap td { padding: 3px 0 !important; border: none !important; font-size: 13px !important; }
       .user-table-wrap td[data-label]::before {
         content: attr(data-label);
         font-size: 10px; color: #9ca3af; font-weight: 600;
         text-transform: uppercase; display: block; margin-bottom: 2px;
       }
       .user-table-wrap td:last-child { margin-top: 8px; }
-      /* add-user form on mobile */
-      .add-user-form { flex-direction: column !important; }
     }
 
     /* ===== FLOW NODES ===== */
@@ -556,6 +550,10 @@
     .btn-mobile-settings { display: none; }
     @media (max-width: 768px) {
       .sidebar { display: none; }
+      /* dots container */
+      .cell-notes-wrap {
+        display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 0;
+      }
       .btn-mobile-settings {
         display: flex; align-items: center; justify-content: center;
         background: rgba(255,255,255,0.15); color: white;
@@ -566,15 +564,14 @@
       .cell-day { font-size: 13px; width: 26px; height: 26px; }
       /* Mobile: dots only */
       .note-item {
-        display: inline-flex;
+        display: flex;
         width: 10px; height: 10px;
-        padding: 0; margin: 2px 1px;
+        padding: 0; margin: 0;
         background: transparent !important;
-        border-radius: 50%;
-        vertical-align: middle;
+        border-radius: 50%; flex-shrink: 0;
       }
       .note-text, .note-time-badge { display: none; }
-      .note-dot { width: 10px; height: 10px; }
+      .note-dot { width: 10px; height: 10px; flex-shrink: 0; }
       .note-more { display: none; }
     }
 
@@ -1344,6 +1341,8 @@
       // Notes (max 3, then "+N more") — sorted by time
       const sorted = [...dayNotes].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
       const shown = sorted.slice(0, 3);
+      const notesWrap = document.createElement('div');
+      notesWrap.className = 'cell-notes-wrap';
       shown.forEach(note => {
         const c = COLORS[note.color] || COLORS.green;
         const item = document.createElement('div');
@@ -1355,13 +1354,14 @@
           : '';
         item.innerHTML = `<div class="note-dot" style="background:${c.dot}"></div><span class="note-text">${escHtml(note.text)}</span>${timeHtml}`;
         item.title = note.time ? `${note.time} — ${note.text}` : note.text;
-        div.appendChild(item);
+        notesWrap.appendChild(item);
       });
+      div.appendChild(notesWrap);
       if (dayNotes.length > 3) {
         const more = document.createElement('div');
         more.className = 'note-more';
         more.textContent = `+${dayNotes.length - 3} รายการ`;
-        div.appendChild(more);
+        notesWrap.appendChild(more);
       }
 
       div.addEventListener('click', () => openModal(cell.year, cell.month, cell.day));
