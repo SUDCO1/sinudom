@@ -528,11 +528,29 @@
     }
 
     /* ===== RESPONSIVE ===== */
+    .btn-mobile-settings { display: none; }
     @media (max-width: 768px) {
       .sidebar { display: none; }
+      .btn-mobile-settings {
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.15); color: white;
+        border: 1px solid rgba(255,255,255,0.3); border-radius: 6px;
+        padding: 7px 12px; font-size: 16px; cursor: pointer;
+      }
       .calendar-cell { min-height: 70px; padding: 4px; }
       .cell-day { font-size: 13px; width: 26px; height: 26px; }
-      .note-item { font-size: 10px; padding: 2px 5px; }
+      /* Mobile: dots only */
+      .note-item {
+        display: inline-flex;
+        width: 10px; height: 10px;
+        padding: 0; margin: 2px 1px;
+        background: transparent !important;
+        border-radius: 50%;
+        vertical-align: middle;
+      }
+      .note-text, .note-time-badge { display: none; }
+      .note-dot { width: 10px; height: 10px; }
+      .note-more { display: none; }
     }
 
     /* ===== FLOW OVERLAY — MOBILE FULLSCREEN ===== */
@@ -646,6 +664,7 @@
     </div>
   </div>
   <div class="navbar-actions">
+    <button class="btn-mobile-settings" onclick="showView('settings')" title="ตั้งค่า">⚙️</button>
     <button class="btn-admin" id="navRoleBtn">Admin</button>
     <button class="btn-logout" id="btnLogout">ออกจากระบบ</button>
   </div>
