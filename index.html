@@ -2476,7 +2476,7 @@
       numInput.focus();
     }
 
-    applyTitleTemplate(btn.dataset.title, {});
+    applyTitleTemplate(btn.dataset.title, btn.dataset.title === selectedNodeTitle ? (window._editingNodeTemplateValues || {}) : {});
   }
 
   function updateTitlePreview() {
@@ -2495,6 +2495,7 @@
     // migrate legacy single image
     if (node.image && !node.images) node.images = [node.image];
     pendingImages = [...(node.images || [])];
+    window._editingNodeTemplateValues = node.templateValues || {};
 
     // neTime field removed
     document.getElementById('neMemo').value   = node.memo   || '';
@@ -2506,10 +2507,10 @@
     let titleMatched = false;
     titleBtns.forEach(b => {
       b.style.outline = 'none'; b.style.fontWeight = 'normal';
-      if (b.dataset.title !== 'custom' && b.dataset.title === node.title) {
+      if (b.dataset.title !== 'custom' && node.title.startsWith(b.dataset.title)) {
         b.style.outline = '2px solid #1a3a6b'; b.style.fontWeight = '700';
         titleMatched = true;
-        selectedNodeTitle = node.title;
+        selectedNodeTitle = b.dataset.title;
       }
     });
     const customInput = document.getElementById('neTitle');
