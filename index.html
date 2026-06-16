@@ -1175,13 +1175,15 @@
     }
     const tb = document.getElementById('userTableBody');
     tb.innerHTML = '';
+    const currentEmail = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.email : '';
     users.forEach((u, i) => {
+      const isMe = u.email === currentEmail;
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #f0f0f0';
       tr.innerHTML = `
         <td style="padding:10px 12px;color:#1a3a6b;font-weight:500;">${u.email}</td>
         <td style="padding:10px 12px;">
-          ${u.isMe
+          ${isMe
             ? `<span style="${roleStyle(u.role)}">${u.role}</span>`
             : `<select onchange="changeRole(${i},this.value)" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;outline:none;">
                 ${[...roles.map(r=>r.name),'Admin'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
@@ -1192,7 +1194,7 @@
         <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.addedBy}</td>
         <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.date}</td>
         <td style="padding:10px 12px;text-align:center;">
-          ${u.isMe
+          ${isMe
             ? `<span style="font-size:12px;color:#9ca3af;">ไม่สามารถลบตัวเองได้</span>`
             : `<button onclick="deleteUser(${i})" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">🗑 ลบ</button>`
           }
