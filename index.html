@@ -337,6 +337,31 @@
     }
     .date-jump-input:focus { border-color: #1a3a6b; }
 
+
+    /* ===== USER CARDS (mobile) ===== */
+    .user-table-wrap { overflow-x: auto; }
+    @media (max-width: 768px) {
+      .user-table-wrap table, .user-table-wrap thead, .user-table-wrap tbody,
+      .user-table-wrap th, .user-table-wrap td, .user-table-wrap tr { display: block; }
+      .user-table-wrap thead { display: none; }
+      .user-table-wrap tr {
+        background: white; border: 1px solid #e5e7eb; border-radius: 10px;
+        margin-bottom: 10px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      }
+      .user-table-wrap td {
+        padding: 3px 0 !important; border: none !important;
+        font-size: 13px !important;
+      }
+      .user-table-wrap td[data-label]::before {
+        content: attr(data-label);
+        font-size: 10px; color: #9ca3af; font-weight: 600;
+        text-transform: uppercase; display: block; margin-bottom: 2px;
+      }
+      .user-table-wrap td:last-child { margin-top: 8px; }
+      /* add-user form on mobile */
+      .add-user-form { flex-direction: column !important; }
+    }
+
     /* ===== FLOW NODES ===== */
     .flow-node {
       position: absolute;
@@ -709,7 +734,7 @@
           <button onclick="renderUsers()" style="background:#f0f4ff;color:#1a3a6b;border:1px solid #c7d7f5;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;">🔄 รีเฟรช</button>
         </div>
 
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <div class="user-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
             <tr style="background:#f8fafc;">
               <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:2px solid #e5e7eb;">อีเมล</th>
@@ -720,7 +745,7 @@
             </tr>
           </thead>
           <tbody id="userTableBody"></tbody>
-        </table>
+        </table></div>
 
         <!-- เพิ่มผู้ใช้ใหม่ -->
         <div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:18px;">
@@ -1182,13 +1207,15 @@
     }
     const tb = document.getElementById('userTableBody');
     tb.innerHTML = '';
+    const currentEmail = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.email : '';
     users.forEach((u, i) => {
+      const isMe = u.email === currentEmail;
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #f0f0f0';
       tr.innerHTML = `
-        <td style="padding:10px 12px;color:#1a3a6b;font-weight:500;">${u.email}</td>
-        <td style="padding:10px 12px;">
-          ${u.isMe
+        <td data-label="อีเมล" style="padding:10px 12px;color:#1a3a6b;font-weight:500;">${u.email}</td>
+        <td data-label="สิทธิ์" style="padding:10px 12px;">
+          ${isMe
             ? `<span style="${roleStyle(u.role)}">${u.role}</span>`
             : `<select onchange="changeRole(${i},this.value)" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;outline:none;">
                 ${[...roles.map(r=>r.name),'Admin'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
@@ -1196,10 +1223,10 @@
                <button onclick="saveRole(${i})" style="margin-left:6px;background:#1a3a6b;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;">บันทึก</button>`
           }
         </td>
-        <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.addedBy}</td>
-        <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.date}</td>
+        <td data-label="เพิ่มโดย" style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.addedBy}</td>
+        <td data-label="วันที่เพิ่ม" style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.date}</td>
         <td style="padding:10px 12px;text-align:center;">
-          ${u.isMe
+          ${isMe
             ? `<span style="font-size:12px;color:#9ca3af;">ไม่สามารถลบตัวเองได้</span>`
             : `<button onclick="deleteUser(${i})" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">🗑 ลบ</button>`
           }
@@ -1429,7 +1456,7 @@
   }
 
   /* ===== เสา ===== */
-  let _saoList = []; // cache จาก Firestore
+  let _saoList = [];
   function getSaoList() { return _saoList; }
   function saveSaoList(list) {
     _saoList = list;
@@ -1491,7 +1518,7 @@
       // Touch drag
       let touchFrom = null, touchClone = null;
       row.addEventListener('touchstart', e => {
-        if (e.target.closest('button')) return; // ให้ปุ่ม ✕ จัดการ click เอง
+        if (e.target.closest('button')) return;
         touchFrom = i;
         const t = e.touches[0];
         touchClone = row.cloneNode(true);
@@ -2992,7 +3019,6 @@
     await setDoc(doc(db, 'settings', 'flowData'), { data: JSON.stringify(data) });
   };
 
-  // ── เสา: save to Firestore ───────────────────────────────────
   window.fbSaveSao = async function(list) {
     await setDoc(doc(db, 'settings', 'saoList'), { list });
   };
