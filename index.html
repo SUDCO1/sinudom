@@ -664,7 +664,7 @@
     </div>
   </div>
   <div class="navbar-actions">
-    <button class="btn-mobile-settings" onclick="showView('settings')" title="ตั้งค่า">⚙️</button>
+    <button class="btn-mobile-settings" id="btnMobileSettings" onclick="toggleMobileView()" title="ตั้งค่า">⚙️</button>
     <button class="btn-admin" id="navRoleBtn">Admin</button>
     <button class="btn-logout" id="btnLogout">ออกจากระบบ</button>
   </div>
@@ -1017,12 +1017,19 @@
   let selectedColor = 'green';
 
   // ===== SETTINGS: VIEW SWITCH =====
+  let _currentView = 'calendar';
   function showView(view) {
+    _currentView = view;
     document.getElementById('calendarView').style.display   = view === 'calendar' ? '' : 'none';
     document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
     document.getElementById('nav-calendar').classList.toggle('active', view === 'calendar');
     document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
+    const btn = document.getElementById('btnMobileSettings');
+    if (btn) btn.textContent = view === 'settings' ? '📅' : '⚙️';
     if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); }
+  }
+  function toggleMobileView() {
+    showView(_currentView === 'settings' ? 'calendar' : 'settings');
   }
 
   // ===== SETTINGS: PERMISSIONS =====
@@ -1175,15 +1182,13 @@
     }
     const tb = document.getElementById('userTableBody');
     tb.innerHTML = '';
-    const currentEmail = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.email : '';
     users.forEach((u, i) => {
-      const isMe = u.email === currentEmail;
       const tr = document.createElement('tr');
       tr.style.borderBottom = '1px solid #f0f0f0';
       tr.innerHTML = `
         <td style="padding:10px 12px;color:#1a3a6b;font-weight:500;">${u.email}</td>
         <td style="padding:10px 12px;">
-          ${isMe
+          ${u.isMe
             ? `<span style="${roleStyle(u.role)}">${u.role}</span>`
             : `<select onchange="changeRole(${i},this.value)" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;outline:none;">
                 ${[...roles.map(r=>r.name),'Admin'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
@@ -1194,7 +1199,7 @@
         <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.addedBy}</td>
         <td style="padding:10px 12px;color:#6b7280;font-size:12px;">${u.date}</td>
         <td style="padding:10px 12px;text-align:center;">
-          ${isMe
+          ${u.isMe
             ? `<span style="font-size:12px;color:#9ca3af;">ไม่สามารถลบตัวเองได้</span>`
             : `<button onclick="deleteUser(${i})" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">🗑 ลบ</button>`
           }
@@ -1424,11 +1429,11 @@
   }
 
   /* ===== เสา ===== */
-  function getSaoList() {
-    try { return JSON.parse(localStorage.getItem('saoList') || '[]'); } catch(e) { return []; }
-  }
+  let _saoList = []; // cache จาก Firestore
+  function getSaoList() { return _saoList; }
   function saveSaoList(list) {
-    localStorage.setItem('saoList', JSON.stringify(list));
+    _saoList = list;
+    if (typeof window.fbSaveSao === 'function') window.fbSaveSao(list);
   }
   function renderSaoDropdown() {
     const sel = document.getElementById('saoSelect');
@@ -1486,6 +1491,7 @@
       // Touch drag
       let touchFrom = null, touchClone = null;
       row.addEventListener('touchstart', e => {
+        if (e.target.closest('button')) return; // ให้ปุ่ม ✕ จัดการ click เอง
         touchFrom = i;
         const t = e.touches[0];
         touchClone = row.cloneNode(true);
@@ -2986,6 +2992,11 @@
     await setDoc(doc(db, 'settings', 'flowData'), { data: JSON.stringify(data) });
   };
 
+  // ── เสา: save to Firestore ───────────────────────────────────
+  window.fbSaveSao = async function(list) {
+    await setDoc(doc(db, 'settings', 'saoList'), { list });
+  };
+
   async function loadFlow() {
     const snap = await getDoc(doc(db, 'settings', 'flowData'));
     if (snap.exists() && typeof flowData !== 'undefined') {
@@ -2993,12 +3004,13 @@
     }
   }
 
-  let _unsubNotes, _unsubUsers, _unsubRoles;
+  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao;
 
   onAuthStateChanged(auth, user => {
     if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
     if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
+    if (_unsubSao)    { _unsubSao();    _unsubSao    = null; }
     if (!user) return;
 
     loadFlow();
@@ -3026,6 +3038,12 @@
       if (me && roleBtn) roleBtn.textContent = me.role || 'User';
       if (typeof renderUsers === 'function') renderUsers();
       if (typeof renderSaoListUI === 'function') renderSaoListUI();
+    });
+
+    _unsubSao = onSnapshot(doc(db, 'settings', 'saoList'), snap => {
+      _saoList = snap.exists() ? (snap.data().list || []) : [];
+      if (typeof renderSaoListUI === 'function') renderSaoListUI();
+      if (typeof renderSaoDropdown === 'function') renderSaoDropdown();
     });
 
     _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
