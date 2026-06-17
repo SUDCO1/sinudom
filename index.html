@@ -716,7 +716,13 @@
         <!-- Role chips -->
         <div id="roleChips" style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 16px;align-items:center;"></div>
 
-        <!-- Permission table placeholder -->
+        <!-- Permission table -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:480px;">
+            <thead><tr id="permColHeaders" style="background:#f8fafc;"></tr></thead>
+            <tbody id="permTableBody"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- จัดการผู้ใช้ -->
@@ -756,7 +762,7 @@
             </div>
             <div style="flex:0 0 140px;">
               <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">🏷️ สิทธิ์ *</div>
-              <select id="newUserRole" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;" id="newUserRole">
+              <select id="newUserRole" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;">
                 <option>Admin</option>
               </select>
             </div>
@@ -982,7 +988,7 @@
 
     <div style="padding:0 20px 20px;display:flex;gap:8px;justify-content:flex-end;">
       <button onclick="closeNodeEdit()" style="background:white;border:1px solid #d1d5db;border-radius:8px;padding:9px 18px;font-size:14px;cursor:pointer;color:#374151;">ยกเลิก</button>
-      <button onclick="saveNodeEdit()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;">💾 บันทึก</button>
+      <button id="neSaveBtn" onclick="saveNodeEdit()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;">💾 บันทึก</button>
     </div>
   </div>
 </div>
@@ -1039,6 +1045,11 @@
   // ===== SETTINGS: VIEW SWITCH =====
   let _currentView = 'calendar';
   function showView(view) {
+    // หน้าตั้งค่า (จัดการผู้ใช้/สิทธิ์) เปิดได้เฉพาะ Admin
+    if (view === 'settings' && !isAdmin()) {
+      alert(currentRole() ? 'หน้าตั้งค่าใช้ได้เฉพาะ Admin เท่านั้น' : 'กำลังโหลดข้อมูลสิทธิ์ กรุณาลองใหม่อีกครั้งสักครู่');
+      view = 'calendar';
+    }
     _currentView = view;
     document.getElementById('calendarView').style.display   = view === 'calendar' ? '' : 'none';
     document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
@@ -1053,15 +1064,50 @@
   }
 
   // ===== SETTINGS: PERMISSIONS =====
+  // ส่วนงานจริงในแอป (ของเดิมเป็นชื่อแผนกสมมติที่ไม่ตรงกับหน้าจอจริง จึงบังคับสิทธิ์ไม่ได้)
+  const SETTINGS_LABEL = 'ตั้งค่า (Settings)';
   const PAGES = [
-    { icon:'📊', label:'สรุปภาพรวม' },
-    { icon:'🛒', label:'ฝ่ายขาย' },
-    { icon:'📋', label:'สถานะออเดอร์' },
-    { icon:'🏭', label:'ฝ่ายผลิต' },
-    { icon:'🚚', label:'ฝ่ายขนส่ง' },
-    { icon:'📦', label:'ฝ่ายสต็อก' },
-    { icon:'👥', label:'ลูกค้า' },
+    { icon:'📅', label:'ปฏิทิน/โน้ต' },
+    { icon:'🔀', label:'ผังงาน (Flowchart)' },
+    { icon:'⚙️', label: SETTINGS_LABEL, accessOnly:true },
   ];
+
+  // ===== สิทธิ์: ตรวจว่าผู้ใช้ปัจจุบันทำสิ่งนี้ได้ไหม =====
+  // role ของผู้ใช้ปัจจุบัน (โมดูล Firebase จะตั้งค่า window._currentRole หลังโหลดรายชื่อผู้ใช้)
+  function currentRole() { return window._currentRole || ''; }
+  function isAdmin() { return currentRole() === 'Admin'; }
+  // action: 'read' | 'write' | 'del'
+  function can(pageLabel, action) {
+    const role = currentRole();
+    if (role === 'Admin') return true;          // Admin ทำได้ทุกอย่างเสมอ
+    if (!role) return false;                     // ยังไม่รู้สิทธิ์ → กันไว้ก่อน
+    const p = (perms[pageLabel] && perms[pageLabel][role]) || null;
+    if (!p) return action !== 'del';             // ยังไม่ตั้งค่า → ดู/แก้ได้ แต่ลบไม่ได้
+    return !!p[action];
+  }
+  function denyMsg() {
+    return currentRole()
+      ? 'คุณไม่มีสิทธิ์ทำรายการนี้ (ติดต่อ Admin)'
+      : 'กำลังโหลดข้อมูลสิทธิ์ กรุณาลองใหม่อีกครั้งสักครู่';
+  }
+  // ใครเข้าหน้าตั้งค่าได้บ้าง: Admin เสมอ + ตำแหน่งที่ถูกติ๊ก "เข้าถึง" หน้าตั้งค่า
+  function canAccessSettings() {
+    if (isAdmin()) return true;
+    const role = currentRole();
+    if (!role) return false;
+    const p = perms[SETTINGS_LABEL] && perms[SETTINGS_LABEL][role];
+    return !!(p && p.read);
+  }
+  // ซ่อนเมนูตั้งค่าสำหรับผู้ที่ไม่มีสิทธิ์เข้า (โมดูล Firebase เรียกหลังรู้ role)
+  window.applyRoleVisibility = function() {
+    const show = canAccessSettings();
+    const nav = document.getElementById('nav-settings');
+    if (nav) nav.style.display = show ? '' : 'none';
+    const mob = document.getElementById('btnMobileSettings');
+    if (mob) mob.style.display = show ? '' : 'none';
+    // ถ้าผู้ใช้ที่ไม่ใช่ Admin ค้างอยู่หน้าตั้งค่า ให้เด้งกลับปฏิทิน
+    if (!show && _currentView === 'settings') showView('calendar');
+  };
 
   // roles: array of { name, color }
   let roles = JSON.parse(localStorage.getItem('calRoles') || 'null') || [
@@ -1075,17 +1121,24 @@
     PAGES.forEach(p => {
       if (!perms[p.label]) perms[p.label] = {};
       roles.forEach(r => {
-        if (!perms[p.label][r.name]) perms[p.label][r.name] = { read: true, write: false, del: false };
+        if (!perms[p.label][r.name]) perms[p.label][r.name] = p.accessOnly
+          ? { read: false, write: false, del: false }
+          : { read: true, write: true, del: false };
       });
     });
   }
 
-  function savePerms() {
+  async function savePerms() {
+    if (!isAdmin()) return alert(denyMsg());
     localStorage.setItem('calPerms', JSON.stringify(perms));
     localStorage.setItem('calRoles', JSON.stringify(roles));
-    if (typeof window.fbSavePerms === 'function') window.fbSavePerms(perms);
-    if (typeof window.fbSaveRoles === 'function') window.fbSaveRoles(roles);
-    alert('บันทึกสิทธิ์เรียบร้อย');
+    try {
+      if (typeof window.fbSavePerms === 'function') await window.fbSavePerms(perms);
+      if (typeof window.fbSaveRoles === 'function') await window.fbSaveRoles(roles);
+      alert('บันทึกสิทธิ์เรียบร้อย');
+    } catch (e) {
+      alert('บันทึกสิทธิ์ไม่สำเร็จ (อาจไม่มีสิทธิ์ หรือเครือข่ายมีปัญหา): ' + (e?.message || e));
+    }
   }
 
   // Palette for auto-assigning colors to new roles
@@ -1106,12 +1159,16 @@
     renderUsers();
   }
 
-  function deleteRole(name) {
+  async function deleteRole(name) {
     if (!confirm(`ลบตำแหน่ง "${name}" ?`)) return;
     roles = roles.filter(r => r.name !== name);
     PAGES.forEach(p => { if (perms[p.label]) delete perms[p.label][name]; });
-    if (typeof window.fbSaveRoles === 'function') window.fbSaveRoles(roles);
-    if (typeof window.fbSavePerms === 'function') window.fbSavePerms(perms);
+    try {
+      if (typeof window.fbSaveRoles === 'function') await window.fbSaveRoles(roles);
+      if (typeof window.fbSavePerms === 'function') await window.fbSavePerms(perms);
+    } catch (e) {
+      alert('ลบตำแหน่งไม่สำเร็จ (อาจไม่มีสิทธิ์): ' + (e?.message || e));
+    }
     renderPermTable();
     renderRoleChips();
     renderUsers();
@@ -1144,13 +1201,18 @@
 
   function renderPermTable() {
     ensurePerms();
-    // Update column headers
+    // Update column headers (มี element จริงแล้ว — กัน null ไว้ด้วย)
     const thead = document.getElementById('permColHeaders');
-    thead.innerHTML = roles.map(r =>
-      `<th style="padding:10px 16px;color:${r.color};font-weight:700;border-bottom:2px solid #e5e7eb;text-align:center;white-space:nowrap;">${r.name}</th>`
+    if (!thead) return;
+    let head = `<th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:2px solid #e5e7eb;">ส่วนงาน</th>`;
+    head += `<th style="padding:10px 16px;color:#f5a623;font-weight:700;border-bottom:2px solid #e5e7eb;text-align:center;white-space:nowrap;">Admin</th>`;
+    head += roles.map(r =>
+      `<th style="padding:10px 16px;color:${r.color};font-weight:700;border-bottom:2px solid #e5e7eb;text-align:center;white-space:nowrap;">${escHtml(r.name)}</th>`
     ).join('');
+    thead.innerHTML = head;
 
     const tb = document.getElementById('permTableBody');
+    if (!tb) return;
     tb.innerHTML = '';
     PAGES.forEach(p => {
       const tr = document.createElement('tr');
@@ -1159,6 +1221,10 @@
       cells += `<td style="padding:10px 16px;text-align:center;"><span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">ทั้งหมด</span></td>`;
       roles.forEach(role => {
         const perm = perms[p.label][role.name];
+        if (p.accessOnly) {
+          cells += `<td style="padding:8px 12px;text-align:center;"><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" ${perm.read?'checked':''} onchange="togglePerm('${p.label}','${role.name}','read',this.checked)"> เข้าถึง</label></td>`;
+          return;
+        }
         cells += `<td style="padding:8px 12px;text-align:center;">
           <div style="display:inline-flex;gap:6px;">
             <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;">
@@ -1202,7 +1268,7 @@
     }
     const tb = document.getElementById('userTableBody');
     tb.innerHTML = '';
-    const currentEmail = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.email : '';
+    const currentEmail = window._authEmail || '';
     users.forEach((u, i) => {
       const isMe = u.email === currentEmail;
       const tr = document.createElement('tr');
@@ -1231,24 +1297,36 @@
   }
 
   function changeRole(i, val) { users[i].role = val; }
-  function saveRole(i) {
+  async function saveRole(i) {
+    if (!isAdmin()) return alert(denyMsg());
     const u = users[i];
-    if (u._id && typeof window.fbUpdateUserRole === 'function') {
-      window.fbUpdateUserRole(u._id, u.role);
+    const myEmail = window._authEmail || '';
+    if (u.email === myEmail) return alert('ไม่สามารถเปลี่ยนสิทธิ์ของตัวเองได้');
+    try {
+      if (u._id && typeof window.fbUpdateUserRole === 'function') {
+        await window.fbUpdateUserRole(u._id, u.role);
+      }
+      renderUsers();
+      alert('บันทึกสิทธิ์ ' + u.email + ' เรียบร้อย');
+    } catch (e) {
+      alert('บันทึกสิทธิ์ไม่สำเร็จ (อาจไม่มีสิทธิ์ หรือเครือข่ายมีปัญหา): ' + (e?.message || e));
     }
-    renderUsers();
-    alert('บันทึกสิทธิ์ ' + u.email + ' เรียบร้อย');
   }
-  function deleteUser(i) {
-    if (!confirm('ลบผู้ใช้ ' + users[i].email + ' ?')) return;
+  async function deleteUser(i) {
+    if (!isAdmin()) return alert(denyMsg());
     const u = users[i];
+    const myEmail = window._authEmail || '';
+    if (u.email === myEmail) return alert('ไม่สามารถลบตัวเองได้');
+    if (!confirm('ลบผู้ใช้ ' + u.email + ' ?')) return;
     if (u._id && typeof window.fbDeleteUser === 'function') {
-      window.fbDeleteUser(u._id);
+      try { await window.fbDeleteUser(u._id); }
+      catch (e) { return alert('ลบผู้ใช้ไม่สำเร็จ (อาจไม่มีสิทธิ์): ' + (e?.message || e)); }
     }
     users.splice(i, 1);
     renderUsers();
   }
   function addUser() {
+    if (!isAdmin()) return alert(denyMsg());
     const email = document.getElementById('newUserEmail').value.trim();
     const pass  = document.getElementById('newUserPass').value.trim();
     const role  = document.getElementById('newUserRole').value;
@@ -1256,15 +1334,23 @@
     if (pass.length < 6) return alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
     if (users.find(u => u.email === email)) return alert('อีเมลนี้มีอยู่แล้ว');
     if (typeof window.fbAddUser === 'function') {
-      window.fbAddUser(email, role).then(newUser => {
-        users.push(newUser);
-            renderUsers();
-      });
+      // ส่ง password ไปด้วย (เดิมไม่ได้ส่ง ทำให้สร้างผู้ใช้ไม่ได้)
+      // ไม่ต้อง push เอง เพราะ onSnapshot ของ appUsers จะอัปเดตรายชื่อให้อัตโนมัติ
+      window.fbAddUser(email, role, pass)
+        .then(() => { alert('เพิ่มผู้ใช้ ' + email + ' เรียบร้อย'); })
+        .catch(err => {
+          const map = {
+            'auth/email-already-in-use': 'อีเมลนี้มีบัญชีอยู่แล้ว',
+            'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
+            'auth/weak-password': 'รหัสผ่านอ่อนเกินไป (อย่างน้อย 6 ตัว)',
+          };
+          alert('เพิ่มผู้ใช้ไม่สำเร็จ: ' + (map[err?.code] || err?.message || err));
+        });
     } else {
       const today = new Date();
       const d = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()+543}`;
       users.push({ email, role, addedBy:'admin', date: d });
-        renderUsers();
+      renderUsers();
     }
     document.getElementById('newUserEmail').value = '';
     document.getElementById('newUserPass').value  = '';
@@ -1380,6 +1466,11 @@
     document.getElementById('timeInput').value = '';
     const saoEl = document.getElementById('saoSelect');
     if (saoEl) saoEl.value = '';
+    const _canEditNote = can('ปฏิทิน/โน้ต','write');
+    const _addSec = document.querySelector('#modalOverlay .add-note-section');
+    if (_addSec) _addSec.style.display = _canEditNote ? '' : 'none';
+    const _noteSaveBtn = document.querySelector('#modalOverlay .btn-save');
+    if (_noteSaveBtn) _noteSaveBtn.style.display = _canEditNote ? '' : 'none';
     document.getElementById('modalOverlay').classList.add('open');
     if (window.innerWidth > 768) setTimeout(() => document.getElementById('noteInput').focus(), 200);
   }
@@ -1411,7 +1502,7 @@
         <div class="note-row-dot" style="background:${c.dot}"></div>
         <div style="flex:1;min-width:0;">${titleHtml}</div>
         ${timeHtml}
-        <button class="note-row-delete" title="ลบ" onclick="deleteNote(${note._idx})">🗑</button>
+        ${can('ปฏิทิน/โน้ต','del') ? `<button class="note-row-delete" title="ลบ" onclick="deleteNote(${note._idx})">🗑</button>` : ''}
         <button class="note-row-goto" onclick="openNoteDetail(${note._idx})">เข้าไป ▶</button>
       `;
       list.appendChild(row);
@@ -1419,12 +1510,14 @@
   }
 
   function deleteNote(idx) {
+    if (!can('ปฏิทิน/โน้ต', 'del')) return alert(denyMsg());
     if (!notes[selectedDateKey]) return;
     const note = notes[selectedDateKey][idx];
     // Clean up orphaned flow data for this note
     if (note && note.id) {
       const fk = getFlowKey(selectedDateKey, note.id);
-      if (flowData[fk]) { delete flowData[fk]; saveFlowData(); }
+      if (flowData[fk]) { delete flowData[fk]; }
+      if (typeof window.fbDeleteFlowOne === 'function') window.fbDeleteFlowOne(fk);
     }
     notes[selectedDateKey].splice(idx, 1);
     if (notes[selectedDateKey].length === 0) delete notes[selectedDateKey];
@@ -1434,6 +1527,7 @@
   }
 
   function saveNote() {
+    if (!can('ปฏิทิน/โน้ต', 'write')) return alert(denyMsg());
     const input = document.getElementById('noteInput');
     const text = input.value.trim();
     const saoEl = document.getElementById('saoSelect');
@@ -1443,7 +1537,7 @@
     const time = document.getElementById('timeInput').value || '';
 
     if (!notes[selectedDateKey]) notes[selectedDateKey] = [];
-    notes[selectedDateKey].push({ id: 'note_' + Date.now(), text: sao || text, sao, detail: text, color: selectedColor, time });
+    notes[selectedDateKey].push({ id: uid('note_'), text: sao || text, sao, detail: text, color: selectedColor, time });
     saveToStorage();
 
     input.value = '';
@@ -1680,13 +1774,22 @@
 
   /* ===== FLOW CHART ===== */
   localStorage.removeItem('calendarFlow');
+  // สร้าง ID ที่ไม่ซ้ำกัน (เดิมใช้ Date.now() อย่างเดียว ถ้ากดเร็ว ๆ ในมิลลิวินาทีเดียวจะได้ ID ซ้ำแล้วข้อมูลทับกัน)
+  let _idCounter = 0;
+  function uid(prefix) {
+    return prefix + Date.now().toString(36) + '_' + (_idCounter++).toString(36) + Math.random().toString(36).slice(2, 6);
+  }
   let flowData = {};
   let currentFlowKey = null;
   let flowNavStack   = [];
 
-  function saveFlowData() {
-    if (typeof window.fbSaveFlow === 'function') {
-      window.fbSaveFlow(flowData);
+  // เซฟ "ผังเดียว" ตาม key (ค่าเริ่มต้น = ผังที่กำลังเปิดอยู่)
+  // เก็บแยกเอกสารต่อผัง เพื่อไม่ให้ข้อมูลก้อนใหญ่เกิน 1MB ของ Firestore แล้วเซฟไม่ขึ้น (ต้นเหตุที่ข้อมูลหาย)
+  function saveFlowData(key) {
+    const k = key || currentFlowKey;
+    if (!k || !flowData[k]) return;
+    if (typeof window.fbSaveFlowOne === 'function') {
+      window.fbSaveFlowOne(k, flowData[k]);
     }
   }
 
@@ -1695,15 +1798,18 @@
   }
 
   function initFlowIfNeeded(key, rootTitle) {
+    // อย่าเพิ่งสร้างผังใหม่ถ้ายังโหลดข้อมูลเดิมไม่เสร็จ (กันเขียนทับผังที่มีอยู่แล้วบน server)
+    if (!window._flowLoaded) { _pendingFlowInit = { key, rootTitle }; return; }
     if (!flowData[key]) {
-      const rootId = 'n_' + Date.now();
+      const rootId = uid('n_');
       flowData[key] = {
         rootId,
         nodes: { [rootId]: { title: rootTitle, memo: '', rightId: null, downId: null } }
       };
-      saveFlowData();
+      saveFlowData(key);
     }
   }
+  let _pendingFlowInit = null;
 
   function openNoteDetail(idx) {
     const note = notes[selectedDateKey][idx];
@@ -1711,7 +1817,7 @@
 
     // Migrate old notes that don't have a stable id
     if (!note.id) {
-      note.id = 'note_' + Date.now() + '_' + idx;
+      note.id = uid('note_');
       saveToStorage();
     }
 
@@ -1926,6 +2032,8 @@
     });
 
     // Draw nodes + buttons
+    const canEditFlow = can('ผังงาน (Flowchart)', 'write');
+    const canDelFlow  = can('ผังงาน (Flowchart)', 'del');
     Object.keys(flow.nodes).forEach(id => {
       const node   = flow.nodes[id];
       const isRoot = id === flow.rootId;
@@ -1947,18 +2055,18 @@
         ${typeMeta.label ? `<div class="flow-node-type-badge ${typeMeta.badge}">${typeMeta.label}</div>` : ''}
         <div class="flow-node-header">
           <span class="flow-node-title">${escHtml(node.title)}</span>
-          ${!isRoot ? `<button class="flow-node-del" title="ลบ" onclick="event.stopPropagation();deleteFlowNode('${id}')">✕</button>` : ''}
+          ${(!isRoot && canDelFlow) ? `<button class="flow-node-del" title="ลบ" onclick="event.stopPropagation();deleteFlowNode('${id}')">✕</button>` : ''}
         </div>
         ${!hasData ? `<div class="flow-node-hint">แตะเพื่อดูรายละเอียด</div>` : ''}
         <div class="flow-node-footer" style="display:flex;gap:6px;">
           ${hasData ? `<button class="flow-node-view-btn" onclick="event.stopPropagation();openNodePreview('${id}')">🔍 ดูข้อมูล</button>` : ''}
-          <button class="flow-node-edit-btn" onclick="event.stopPropagation();openNodeEdit('${id}')">✏️ แก้ไข</button>
+          ${canEditFlow ? `<button class="flow-node-edit-btn" onclick="event.stopPropagation();openNodeEdit('${id}')">✏️ แก้ไข</button>` : ''}
         </div>
       `;
       canvas.appendChild(card);
 
       // Right add button
-      if (!node.rightId) {
+      if (canEditFlow && !node.rightId) {
         const btn = document.createElement('button');
         btn.className = 'flow-add-btn';
         btn.title = 'เพิ่มทางขวา';
@@ -1970,7 +2078,7 @@
       }
 
       // Down add button
-      if (!node.downId) {
+      if (canEditFlow && !node.downId) {
         const btn = document.createElement('button');
         btn.className = 'flow-add-btn';
         btn.title = 'เพิ่มด้านล่าง';
@@ -1994,8 +2102,10 @@
   }
 
   function addFlowNode(parentId, dir) {
+    if (!can('ผังงาน (Flowchart)', 'write')) return alert(denyMsg());
     const flow = flowData[currentFlowKey];
-    const newId = 'n_' + Date.now();
+    if (!flow) return alert('กำลังโหลดผัง กรุณาลองใหม่อีกครั้งสักครู่');
+    const newId = uid('n_');
     flow.nodes[newId] = { title: 'หัวข้อใหม่', memo: '', rightId: null, downId: null };
     if (dir === 'right') flow.nodes[parentId].rightId = newId;
     else                 flow.nodes[parentId].downId  = newId;
@@ -2004,7 +2114,9 @@
   }
 
   function deleteFlowNode(id) {
+    if (!can('ผังงาน (Flowchart)', 'del')) return alert(denyMsg());
     const flow = flowData[currentFlowKey];
+    if (!flow) return alert('กำลังโหลดผัง กรุณาลองใหม่อีกครั้งสักครู่');
     const node = flow.nodes[id];
     if (!node) return;
     showConfirm(
@@ -2133,9 +2245,13 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    const lb = document.getElementById('lightbox');
+    // ทำงานเฉพาะตอนที่ lightbox เปิดอยู่จริง (กัน index NaN และคีย์ลัดทำงานผิดที่)
+    const isOpen = lb && lb.style.pointerEvents === 'all';
+    if (!isOpen) return;
     if (e.key === 'Escape')     closeLightbox();
-    if (e.key === 'ArrowRight') lbNav(1);
-    if (e.key === 'ArrowLeft')  lbNav(-1);
+    if (e.key === 'ArrowRight' && lbImages.length > 1) lbNav(1);
+    if (e.key === 'ArrowLeft'  && lbImages.length > 1) lbNav(-1);
   });
 
   /* ===== NODE EDIT POPUP ===== */
@@ -2489,7 +2605,9 @@
   }
 
   function openNodeEdit(id) {
-    const node = flowData[currentFlowKey].nodes[id];
+    const flow = flowData[currentFlowKey];
+    if (!flow) return alert('กำลังโหลดผัง กรุณาลองใหม่อีกครั้งสักครู่');
+    const node = flow.nodes[id];
     if (!node) return;
     editingNodeId = id;
     // migrate legacy single image
@@ -2550,9 +2668,11 @@
     ov.style.opacity = '1'; ov.style.pointerEvents = 'all';
     pn.style.transform = 'scale(1)';
     setTimeout(() => {
+      // โฟกัสช่องที่กำลังแสดงอยู่จริง (เดิมโฟกัสช่องชื่อที่ถูกซ่อน เลยไม่มีผล)
       const t = document.getElementById('neTitle');
-      t.focus();
-      t.select();
+      const num = document.getElementById('neTitleNumber');
+      if (t && t.style.display !== 'none') { t.focus(); t.select(); }
+      else if (num && num.offsetParent !== null) { num.focus(); num.select(); }
     }, 150);
   }
 
@@ -2580,25 +2700,59 @@
     renderImageGrid();
   }
 
-  function handleImageUpload(event) {
-    const files = Array.from(event.target.files);
-    let loaded = 0;
-    files.forEach(file => {
-      if (file.size > 50 * 1024 * 1024) { alert(`${file.name} ใหญ่เกิน 50MB`); return; }
+  // ย่อ + บีบอัดรูปก่อนเก็บ (กว้าง/สูงสูงสุด ~1280px, JPEG ~0.7)
+  // เพื่อให้ base64 เล็กพอที่เอกสาร Firestore จะไม่เกิน 1MB (ต้นเหตุที่บันทึกไม่ขึ้นแล้วข้อมูลหาย)
+  function compressImage(file) {
+    const MAX = 1280, QUALITY = 0.7;
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      reader.onerror = () => reject(new Error('read-fail'));
       reader.onload = (e) => {
-        pendingImages.push(e.target.result);
-        loaded++;
-        if (loaded === files.length) renderImageGrid();
+        const img = new Image();
+        img.onerror = () => reject(new Error('decode-fail'));
+        img.onload = () => {
+          let { width: w, height: h } = img;
+          if (w > MAX || h > MAX) {
+            const scale = Math.min(MAX / w, MAX / h);
+            w = Math.round(w * scale); h = Math.round(h * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          try { resolve(canvas.toDataURL('image/jpeg', QUALITY)); }
+          catch (err) { resolve(e.target.result); } // เผื่อรูปมี CORS/แปลก → ใช้ของเดิม
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
+  }
+
+  function handleImageUpload(event) {
+    const files = Array.from(event.target.files);
+    // จำกัดไฟล์ดิบ 20MB (ไฟล์ใหญ่กว่านี้อ่านเป็น base64 แล้วเสี่ยงเครื่อง/มือถือค้าง)
+    const valid = files.filter(f => {
+      if (f.size > 20 * 1024 * 1024) { alert(`${f.name} ใหญ่เกิน 20MB`); return false; }
+      return true;
+    });
     event.target.value = '';
+    if (!valid.length) return;
+    // ใช้ Promise.allSettled แทนตัวนับ เพื่อให้ grid อัปเดตถูกต้องเสมอแม้ลำดับเสร็จไม่เรียงกัน
+    Promise.allSettled(valid.map(f => compressImage(f))).then(results => {
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') pendingImages.push(r.value);
+        else alert(`อ่านไฟล์ ${valid[i].name} ไม่สำเร็จ`);
+      });
+      renderImageGrid();
+    });
   }
 
   function saveNodeEdit() {
     if (!editingNodeId) return;
-    const node = flowData[currentFlowKey].nodes[editingNodeId];
+    if (!can('ผังงาน (Flowchart)', 'write')) return alert(denyMsg());
+    const _flow = flowData[currentFlowKey];
+    if (!_flow || !_flow.nodes[editingNodeId]) return alert('กำลังโหลดผัง กรุณาลองใหม่อีกครั้งสักครู่');
+    const node = _flow.nodes[editingNodeId];
     if (selectedNodeTitle && selectedNodeTitle !== 'custom') {
       const num = document.getElementById('neTitleNumber').value.trim();
       node.title = selectedNodeTitle + (num ? num : '');
@@ -2614,6 +2768,7 @@
     // Save manually picked type
     const activeType = document.querySelector('#neTypePicker button[style*="outline: 2px"]');
     node.nodeType = activeType ? activeType.dataset.type : 'auto';
+    // บันทึกแบบไม่รอ (เก็บลง local cache ทันที + sync ขึ้น server เบื้องหลัง)
     saveFlowData();
     closeNodeEdit();
     renderFlow();
@@ -2660,7 +2815,7 @@
 
   /* ===== UTILS ===== */
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   /* ===== INIT ===== */
@@ -2702,6 +2857,8 @@
       const node = flow.nodes[id];
       if (!node) return;
       _previewNodeId = id;
+      const _peb = document.getElementById('nodePreviewEditBtn');
+      if (_peb) _peb.style.display = can('ผังงาน (Flowchart)','write') ? '' : 'none';
 
       document.getElementById('nodePreviewTitle').textContent = node.title || '(ไม่มีชื่อ)';
       const body = document.getElementById('nodePreviewBody');
@@ -2820,8 +2977,10 @@
         const d = document.createElement('div');
         d.className = 'preview-section';
         d.innerHTML = `<div class="preview-section-title">รูปภาพ</div>`;
-        imgs.forEach(src => {
-          d.innerHTML += `<img src="${src}" style="width:100%;border-radius:8px;margin-top:4px;max-height:200px;object-fit:cover;cursor:zoom-in;" onclick="openLightbox([this.src],0)"/>`;
+        // ส่งรูปทั้งชุด เพื่อให้เลื่อนซ้าย-ขวาใน lightbox ได้ (เดิมส่งรูปเดียว เลื่อนไม่ได้)
+        window._previewImgs = imgs;
+        imgs.forEach((src, i) => {
+          d.innerHTML += `<img src="${src}" style="width:100%;border-radius:8px;margin-top:4px;max-height:200px;object-fit:cover;cursor:zoom-in;" onclick="openLightbox(window._previewImgs, ${i})"/>`;
         });
         body.appendChild(d);
       }
@@ -2841,7 +3000,8 @@
   import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, collection,
+    getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    doc, getDoc, setDoc, collection,
     getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -2858,7 +3018,15 @@
 
   const app  = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db   = getFirestore(app);
+  // เปิด offline cache (IndexedDB) เพื่อให้การบันทึกอยู่ได้แม้รีเฟรชทันที/เน็ตหลุด แล้วค่อย sync ขึ้น server เอง
+  let db;
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+  } catch (e) {
+    db = getFirestore(app); // เผื่อเบราว์เซอร์ไม่รองรับ IndexedDB
+  }
 
   // ── Login ────────────────────────────────────────────────────
   window.doLogin = async function() {
@@ -2897,6 +3065,8 @@
 
   // ── Auth state ──────────────────────────────────────────────
   onAuthStateChanged(auth, user => {
+    // เผยแพร่อีเมลผู้ใช้ปัจจุบันให้สคริปต์หลักใช้ (โมดูลกับสคริปต์ปกติแยก scope กัน)
+    window._authEmail = user ? user.email : '';
     if (user) {
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('mainApp').style.display = '';
@@ -2905,6 +3075,7 @@
       const roleBtn = document.getElementById('navRoleBtn');
       // role will be updated after loadUsers
     } else {
+      window._currentRole = '';
       document.getElementById('loginOverlay').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'none';
     }
@@ -2997,10 +3168,15 @@
 
   window.fbSaveNoteDate = async function(dateKey, list) {
     if (!dateKey) return;
-    if (!list || list.length === 0) {
-      await deleteDoc(doc(db, 'notes', dateKey)).catch(() => {});
-    } else {
-      await setDoc(doc(db, 'notes', dateKey), { list });
+    try {
+      if (!list || list.length === 0) {
+        await deleteDoc(doc(db, 'notes', dateKey));
+      } else {
+        await setDoc(doc(db, 'notes', dateKey), { list });
+      }
+    } catch (e) {
+      console.error('บันทึกโน้ตไม่สำเร็จ:', e);
+      alert('บันทึกโน้ตไม่สำเร็จ (เครือข่ายมีปัญหา?): ' + (e?.message || e));
     }
   };
 
@@ -3014,31 +3190,118 @@
     await deleteDoc(doc(db, 'appUsers', id));
   };
 
-  window.fbSaveFlow = async function(data) {
-    await setDoc(doc(db, 'settings', 'flowData'), { data: JSON.stringify(data) });
+  // เซฟผังทีละอัน (เอกสารแยกต่อผัง) — เอกสารเล็ก ไม่ชนเพดาน 1MB และเซฟผังหนึ่งไม่กระทบผังอื่น
+  window.fbSaveFlowOne = async function(key, flowObj) {
+    if (!key) return;
+    try {
+      const json = JSON.stringify(flowObj);
+      // เตือนถ้าใกล้เพดาน 1MB ของ Firestore (เช่น แนบรูปเยอะเกินไป)
+      if (json.length > 950000) {
+        alert('ผังนี้มีข้อมูล/รูปภาพมากเกินไป อาจบันทึกไม่สำเร็จ กรุณาลดจำนวนรูป');
+      }
+      await setDoc(doc(db, 'flows', key), { data: json });
+    } catch (e) {
+      console.error('บันทึกผังไม่สำเร็จ:', key, e);
+      alert('บันทึกไม่สำเร็จ: ' + (e?.message || e));
+    }
+  };
+
+  window.fbDeleteFlowOne = async function(key) {
+    if (!key) return;
+    await deleteDoc(doc(db, 'flows', key)).catch(() => {});
   };
 
   window.fbSaveSao = async function(list) {
-    await setDoc(doc(db, 'settings', 'saoList'), { list });
+    try {
+      await setDoc(doc(db, 'settings', 'saoList'), { list });
+    } catch (e) {
+      alert('บันทึกรายชื่อเสาไม่สำเร็จ (อาจไม่มีสิทธิ์): ' + (e?.message || e));
+    }
   };
 
-  async function loadFlow() {
-    const snap = await getDoc(doc(db, 'settings', 'flowData'));
-    if (snap.exists() && typeof flowData !== 'undefined') {
-      try { Object.assign(flowData, JSON.parse(snap.data().data || '{}')); } catch(e) {}
+  window._flowLoaded = false;
+
+  function _redrawFlowIfOpen() {
+    const ov = document.getElementById('flowOverlay');
+    if (ov && ov.classList.contains('open') && typeof currentFlowKey !== 'undefined' &&
+        currentFlowKey && flowData[currentFlowKey] && typeof renderFlow === 'function') {
+      renderFlow();
     }
   }
 
-  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao;
+  async function loadFlow() {
+    if (typeof flowData === 'undefined') return;
+    // 1) โหลดผังทั้งหมดจาก collection 'flows' (เอกสารแยกต่อผัง)
+    try {
+      const colSnap = await getDocs(collection(db, 'flows'));
+      colSnap.forEach(d => { try { flowData[d.id] = JSON.parse(d.data().data || '{}'); } catch(e){} });
+
+      // 2) ย้ายข้อมูลเก่าจากก้อนเดียว settings/flowData → แยกเป็นเอกสารต่อผัง (ครั้งเดียว, ไม่ลบของเดิมไว้เป็น backup)
+      const oldSnap = await getDoc(doc(db, 'settings', 'flowData'));
+      if (oldSnap.exists()) {
+        let oldData = {};
+        try { oldData = JSON.parse(oldSnap.data().data || '{}'); } catch(e){}
+        for (const k of Object.keys(oldData)) {
+          if (!flowData[k]) {
+            flowData[k] = oldData[k];
+            setDoc(doc(db, 'flows', k), { data: JSON.stringify(oldData[k]) }).catch(()=>{});
+          }
+        }
+      }
+    } catch(e) { console.error('โหลดผังไม่สำเร็จ:', e); }
+
+    window._flowLoaded = true;
+
+    // ถ้าผู้ใช้เปิดผังค้างไว้ระหว่างรอโหลด → สร้าง/วาดให้เรียบร้อย
+    if (_pendingFlowInit) {
+      const { key, rootTitle } = _pendingFlowInit;
+      _pendingFlowInit = null;
+      if (typeof initFlowIfNeeded === 'function') initFlowIfNeeded(key, rootTitle);
+    }
+    _redrawFlowIfOpen();
+
+    // 3) ฟังการเปลี่ยนแปลงแบบเรียลไทม์ (merge ทีละเอกสาร ไม่ล้างทั้งก้อน)
+    if (_unsubFlow) { _unsubFlow(); _unsubFlow = null; }
+    _unsubFlow = onSnapshot(collection(db, 'flows'), snap => {
+      // อย่าทับขณะกำลังแก้ไข node อยู่ (กันข้อมูลที่กำลังพิมพ์หาย)
+      if (typeof editingNodeId !== 'undefined' && editingNodeId) return;
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'removed') { delete flowData[ch.doc.id]; }
+        else { try { flowData[ch.doc.id] = JSON.parse(ch.doc.data().data || '{}'); } catch(e){} }
+      });
+      _redrawFlowIfOpen();
+    });
+  }
+
+  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao, _unsubFlow, _unsubPerms;
 
   onAuthStateChanged(auth, user => {
     if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
     if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
     if (_unsubSao)    { _unsubSao();    _unsubSao    = null; }
+    if (_unsubFlow)   { _unsubFlow();   _unsubFlow   = null; }
+    if (_unsubPerms)  { _unsubPerms();  _unsubPerms  = null; }
     if (!user) return;
 
     loadFlow();
+
+    // โหลดสิทธิ์ (perms) จาก Firestore แบบเรียลไทม์ (เดิมเซฟแต่ไม่เคยโหลดกลับ)
+    _unsubPerms = onSnapshot(doc(db, 'settings', 'perms'), snap => {
+      if (snap.exists() && typeof perms !== 'undefined') {
+        const data = snap.data() || {};
+        Object.keys(perms).forEach(k => delete perms[k]);
+        Object.keys(data).forEach(k => { perms[k] = data[k]; });
+        // เติม default ให้หน้า/ตำแหน่งที่อาจหายไปจากข้อมูลที่โหลดมา (กันสิทธิ์เพี้ยน)
+        if (typeof ensurePerms === 'function') ensurePerms();
+        // ถ้ากำลังเปิดหน้าตั้งค่าอยู่ ให้วาดตารางสิทธิ์ใหม่
+        if (_currentView === 'settings' && typeof renderPermTable === 'function') renderPermTable();
+        // สิทธิ์เข้าหน้าตั้งค่าของบางตำแหน่งขึ้นกับ perms → อัปเดตการแสดงเมนูใหม่
+        if (typeof window.applyRoleVisibility === 'function') window.applyRoleVisibility();
+        // สิทธิ์ดู/แก้ไขผังงานเปลี่ยน → วาดผังใหม่เพื่อซ่อน/แสดงปุ่ม
+        if (typeof _redrawFlowIfOpen === 'function') _redrawFlowIfOpen();
+      }
+    });
 
     _unsubRoles = onSnapshot(doc(db, 'settings', 'roles'), snap => {
       if (snap.exists()) {
@@ -3047,6 +3310,8 @@
       } else {
         setDoc(doc(db, 'settings', 'roles'), { list: [{ name:'Manager', color:'#3b82f6' }, { name:'Sale', color:'#22c55e' }] });
       }
+      // ตำแหน่งใหม่ที่เพิ่งซิงก์เข้ามาอาจยังไม่มีสิทธิ์ default → เติมให้
+      if (typeof ensurePerms === 'function') ensurePerms();
       if (typeof renderRoleChips === 'function') renderRoleChips();
     });
 
@@ -3061,6 +3326,9 @@
       const me = (typeof users !== 'undefined') && users.find(u => u.email === user.email);
       const roleBtn = document.getElementById('navRoleBtn');
       if (me && roleBtn) roleBtn.textContent = me.role || 'User';
+      // เผยแพร่ role ของผู้ใช้ปัจจุบันให้ระบบสิทธิ์ใช้งาน + ซ่อน/แสดงเมนูตั้งค่า
+      window._currentRole = me ? (me.role || '') : '';
+      if (typeof window.applyRoleVisibility === 'function') window.applyRoleVisibility();
       if (typeof renderUsers === 'function') renderUsers();
       if (typeof renderSaoListUI === 'function') renderSaoListUI();
     });
@@ -3073,7 +3341,11 @@
 
     _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
       if (typeof notes !== 'undefined') {
+        // อย่าทับวันที่กำลังเปิดแก้ไขอยู่ (กันข้อมูลที่เพิ่งเพิ่ม/พิมพ์โดนของเก่าทับ)
+        const modalOpen = document.getElementById('modalOverlay')?.classList.contains('open');
+        const editKey = (modalOpen && typeof selectedDateKey !== 'undefined') ? selectedDateKey : null;
         snap.docChanges().forEach(change => {
+          if (editKey && change.doc.id === editKey) return;
           if (change.type === 'removed') { delete notes[change.doc.id]; }
           else { notes[change.doc.id] = change.doc.data().list || []; }
         });
