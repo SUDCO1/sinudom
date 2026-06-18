@@ -2712,10 +2712,30 @@
     renderImageGrid();
   }
 
-  // ย่อ + บีบอัดรูปก่อนเก็บ (กว้าง/สูงสูงสุด ~1280px, JPEG ~0.7)
+  // ── ตรวจว่ารองรับ WebP ไหม (คำนวณครั้งเดียว แล้ว cache ไว้) ──
+  // WebP เล็กกว่า JPEG ที่คุณภาพใกล้เคียงกันราว 25–35% เบราว์เซอร์ยุคใหม่รองรับหมด
+  let _webpSupport = null;
+  function _supportsWebp() {
+    if (_webpSupport !== null) return _webpSupport;
+    try {
+      const c = document.createElement('canvas');
+      c.width = c.height = 1;
+      _webpSupport = c.toDataURL('image/webp').startsWith('data:image/webp');
+    } catch (e) { _webpSupport = false; }
+    return _webpSupport;
+  }
+
+  // ย่อ + บีบอัดรูปก่อนเก็บ — ปรับอัตโนมัติให้แต่ละรูปไม่เกินงบขนาดที่กำหนด
   // เพื่อให้ base64 เล็กพอที่เอกสาร Firestore จะไม่เกิน 1MB (ต้นเหตุที่บันทึกไม่ขึ้นแล้วข้อมูลหาย)
+  // วิธี: เลือก WebP ถ้าได้ (ไม่ได้ใช้ JPEG) → ลดคุณภาพทีละขั้น → ถ้ายังใหญ่ค่อยลดขนาดภาพ
   function compressImage(file) {
-    const MAX = 1280, QUALITY = 0.7;
+    const MAX        = 1280;          // ด้านยาวสุดเริ่มต้น (px)
+    const MIN_DIM    = 640;           // ไม่ย่อเล็กกว่านี้ (กันภาพแตกจนอ่านไม่ออก)
+    const START_Q    = 0.72;          // คุณภาพเริ่มต้น
+    const MIN_Q      = 0.45;          // คุณภาพต่ำสุดที่ยอมรับ
+    // งบขนาดต่อรูป (นับเป็นความยาวสตริง base64 ≈ จำนวนไบต์ที่ Firestore เก็บ)
+    // ~180KB/รูป → เก็บได้ราว 4–5 รูปต่อผังโดยไม่ชนเพดาน 1MB
+    const TARGET_LEN = 180 * 1024;
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('read-fail'));
@@ -2723,16 +2743,37 @@
         const img = new Image();
         img.onerror = () => reject(new Error('decode-fail'));
         img.onload = () => {
+          const mime = _supportsWebp() ? 'image/webp' : 'image/jpeg';
           let { width: w, height: h } = img;
           if (w > MAX || h > MAX) {
             const scale = Math.min(MAX / w, MAX / h);
             w = Math.round(w * scale); h = Math.round(h * scale);
           }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          try { resolve(canvas.toDataURL('image/jpeg', QUALITY)); }
-          catch (err) { resolve(e.target.result); } // เผื่อรูปมี CORS/แปลก → ใช้ของเดิม
+          const render = (rw, rh, q) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = rw; canvas.height = rh;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, rw, rh);
+            return canvas.toDataURL(mime, q);
+          };
+          try {
+            let q = START_Q;
+            let out = render(w, h, q);
+            // 1) ลดคุณภาพลงทีละ 0.1 จนเข้าเป้า หรือถึงคุณภาพต่ำสุด
+            while (out.length > TARGET_LEN && q > MIN_Q) {
+              q = Math.max(MIN_Q, +(q - 0.1).toFixed(2));
+              out = render(w, h, q);
+            }
+            // 2) ถ้ายังใหญ่อยู่ ค่อยย่อขนาดภาพลงทีละ 15% (คงคุณภาพต่ำสุดไว้)
+            while (out.length > TARGET_LEN && Math.max(w, h) > MIN_DIM) {
+              w = Math.max(1, Math.round(w * 0.85));
+              h = Math.max(1, Math.round(h * 0.85));
+              out = render(w, h, q);
+            }
+            resolve(out);
+          } catch (err) {
+            resolve(e.target.result); // เผื่อรูปมี CORS/แปลก → ใช้ของเดิม
+          }
         };
         img.src = e.target.result;
       };
