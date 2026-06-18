@@ -1252,6 +1252,9 @@
 
   // ===== SETTINGS: USERS =====
   let users = [];
+  // เก็บ role ที่แอดมินเพิ่งเลือกแต่ยังไม่กด "บันทึก" (key = _id ของผู้ใช้)
+  // ใช้กันไม่ให้ onSnapshot(appUsers) โหลดข้อมูลเก่ามาทับค่าที่กำลังแก้ค้างอยู่
+  let _pendingRoleEdits = {};
 
   const roleColors = { Admin:'#f5a623', Manager:'#3b82f6', Sale:'#22c55e' };
   function roleStyle(r) {
@@ -1296,7 +1299,11 @@
     });
   }
 
-  function changeRole(i, val) { users[i].role = val; }
+  function changeRole(i, val) {
+    users[i].role = val;
+    // จดไว้ว่ายังไม่ได้บันทึก เพื่อให้ snapshot ไม่ทับค่านี้
+    if (users[i]._id) _pendingRoleEdits[users[i]._id] = val;
+  }
   async function saveRole(i) {
     if (!isAdmin()) return alert(denyMsg());
     const u = users[i];
@@ -1306,6 +1313,8 @@
       if (u._id && typeof window.fbUpdateUserRole === 'function') {
         await window.fbUpdateUserRole(u._id, u.role);
       }
+      // บันทึกสำเร็จแล้ว → ไม่ต้องกันการทับอีก
+      if (u._id) delete _pendingRoleEdits[u._id];
       renderUsers();
       alert('บันทึกสิทธิ์ ' + u.email + ' เรียบร้อย');
     } catch (e) {
@@ -1688,8 +1697,10 @@
   function fitScreen() {
     const scroller = document.getElementById('flowScroll');
     const canvas   = document.getElementById('flowCanvas');
-    const cw = canvas.scrollWidth / flowZoom;
-    const ch = canvas.scrollHeight / flowZoom;
+    // scrollWidth/scrollHeight ไม่ถูกผลของ CSS transform: scale() อยู่แล้ว จึงเป็นขนาดจริง (unscaled)
+    // ใช้ได้ตรง ๆ — ของเดิมหารด้วย flowZoom ทำให้ "พอดีจอ" เพี้ยนเมื่อ zoom != 1
+    const cw = canvas.scrollWidth;
+    const ch = canvas.scrollHeight;
     const sw = scroller.clientWidth;
     const sh = scroller.clientHeight;
     const fit = Math.min(sw / cw, sh / ch, 1.0) * 0.92;
@@ -3320,6 +3331,12 @@
       if (typeof users !== 'undefined') {
         users.length = 0;
         snap.forEach(d => users.push({ _id: d.id, ...d.data() }));
+        // คืนค่า role ที่แอดมินกำลังแก้ค้างอยู่ (ยังไม่กดบันทึก) ไม่ให้ข้อมูลจากเซิร์ฟเวอร์มาทับ
+        if (typeof _pendingRoleEdits !== 'undefined') {
+          users.forEach(u => {
+            if (u._id && _pendingRoleEdits[u._id] !== undefined) u.role = _pendingRoleEdits[u._id];
+          });
+        }
         if (users.length === 0) {
           addDoc(collection(db, 'appUsers'), { email: user.email, role:'Admin', addedBy:'system-bootstrap', date: todayThai(), isMe: true });
         }
