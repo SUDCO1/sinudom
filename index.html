@@ -789,6 +789,25 @@
           <button onclick="addSao()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">➕ เพิ่ม</button>
         </div>
       </div>
+
+      <!-- สำรองข้อมูล (Backup) -->
+      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;margin-top:20px;">
+        <div style="margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#1a3a6b;">💾 สำรองข้อมูล (Backup)</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">ดาวน์โหลดข้อมูลทั้งหมดเก็บไว้ในเครื่อง / กู้คืนจากไฟล์ที่เคยสำรองไว้</div>
+        </div>
+        <div id="lastBackupInfo" style="font-size:12px;color:#6b7280;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="backupData()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;">⬇️ สำรองข้อมูลตอนนี้</button>
+          <button onclick="restoreData()" style="background:white;color:#b45309;border:1px solid #f59e0b;border-radius:8px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;">♻️ กู้คืนข้อมูล</button>
+          <input id="restoreFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="handleRestoreFile(event)" />
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:12px;line-height:1.6;">
+          • ไฟล์สำรองจะได้เป็น <b>.json</b> หนึ่งไฟล์ เก็บไว้ในเครื่อง/ไดรฟ์ได้เลย<br>
+          • การกู้คืนจะเขียนข้อมูลจากไฟล์ทับของเดิม (เพิ่ม/อัปเดตตาม key) — ระบบจะถามยืนยันก่อนเสมอ<br>
+          • แนะนำให้สำรองอย่างน้อยเดือนละครั้ง
+        </div>
+      </div>
     </div>
 
     <!-- ===== CALENDAR VIEW ===== -->
@@ -1057,7 +1076,7 @@
     document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
     const btn = document.getElementById('btnMobileSettings');
     if (btn) btn.textContent = view === 'settings' ? '📅' : '⚙️';
-    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); }
+    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); renderLastBackupInfo(); }
   }
   function toggleMobileView() {
     showView(_currentView === 'settings' ? 'calendar' : 'settings');
@@ -1676,6 +1695,116 @@
     renderSaoDropdown();
   }
 
+  /* ===== BACKUP / RESTORE ===== */
+  function _fmtDate(d) {
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  // วันสำรองล่าสุดที่ "ใช้จริง" — เอาค่าจากเซิร์ฟเวอร์ (ทุกเครื่องเห็นตรงกัน) มาก่อน
+  // ถ้ายังไม่มีค่อยใช้ค่าในเครื่องเป็นสำรอง
+  function _effLastBackup() {
+    const server = window._lastBackupServer;
+    if (server && !isNaN(server)) return parseInt(server, 10);
+    const local = localStorage.getItem('_lastBackup');
+    return local ? parseInt(local, 10) : null;
+  }
+
+  function renderLastBackupInfo() {
+    const el = document.getElementById('lastBackupInfo');
+    if (!el) return;
+    const ts = _effLastBackup();
+    if (!ts) {
+      el.innerHTML = '⚠️ ยังไม่เคยสำรองข้อมูล';
+      el.style.color = '#b45309';
+      return;
+    }
+    const d = new Date(ts);
+    const days = Math.floor((Date.now() - ts) / 86400000);
+    el.innerHTML = 'สำรองล่าสุด: ' + _fmtDate(d) + (days > 0 ? ' (' + days + ' วันที่แล้ว)' : ' (วันนี้)');
+    el.style.color = days > 30 ? '#b45309' : '#6b7280';
+  }
+
+  async function backupData() {
+    if (typeof window.fbExportAll !== 'function') {
+      alert('ยังโหลดระบบข้อมูลไม่เสร็จ กรุณาลองใหม่อีกครั้งในอีกสักครู่');
+      return;
+    }
+    const btnMsg = _imgToast('กำลังรวบรวมข้อมูล...');
+    try {
+      const data = await window.fbExportAll();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sinudom-backup-' + _fmtDate(new Date()) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      const now = Date.now();
+      localStorage.setItem('_lastBackup', String(now));
+      // บันทึกวันสำรองล่าสุดขึ้น Firebase ด้วย เพื่อให้ทุกเครื่อง/ทุกบัญชีเห็นตรงกัน
+      if (typeof window.fbSetLastBackup === 'function') window.fbSetLastBackup(now);
+      renderLastBackupInfo();
+      _imgToast('✅ สำรองข้อมูลเรียบร้อย');
+      setTimeout(() => { const t = document.getElementById('_imgUploadToast'); if (t) t.remove(); }, 2500);
+    } catch (e) {
+      console.error('backup failed', e);
+      _imgToast('❌ สำรองข้อมูลไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+      setTimeout(() => { const t = document.getElementById('_imgUploadToast'); if (t) t.remove(); }, 4000);
+    }
+  }
+
+  function restoreData() {
+    const inp = document.getElementById('restoreFileInput');
+    if (inp) { inp.value = ''; inp.click(); }
+  }
+
+  function handleRestoreFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+      let data;
+      try {
+        data = JSON.parse(e.target.result);
+      } catch (err) {
+        alert('❌ ไฟล์นี้ไม่ใช่ไฟล์สำรองที่ถูกต้อง (อ่านข้อมูลไม่ได้)');
+        return;
+      }
+      if (!data || typeof data !== 'object' || (!data.flows && !data.notes && !data.appUsers && !data.settings)) {
+        alert('❌ ไฟล์นี้ไม่ใช่ไฟล์สำรองของระบบนี้');
+        return;
+      }
+      const info = 'ไฟล์สำรองวันที่: ' + (data.backupDate || 'ไม่ทราบ') + '\n' +
+        '• Flowchart: ' + Object.keys(data.flows || {}).length + ' รายการ\n' +
+        '• โน้ต (วัน): ' + Object.keys(data.notes || {}).length + ' รายการ\n' +
+        '• ผู้ใช้: ' + ((data.appUsers || []).length) + ' คน\n\n' +
+        'การกู้คืนจะเขียนข้อมูลจากไฟล์นี้ทับของเดิม (เพิ่ม/อัปเดตตาม key)\nยืนยันกู้คืนข้อมูลหรือไม่?';
+      if (!confirm(info)) return;
+      if (typeof window.fbRestoreAll !== 'function') {
+        alert('ยังโหลดระบบข้อมูลไม่เสร็จ กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+      const t = _imgToast('กำลังกู้คืนข้อมูล...');
+      try {
+        await window.fbRestoreAll(data);
+        _imgToast('✅ กู้คืนข้อมูลเรียบร้อย กำลังโหลดหน้าใหม่...');
+        setTimeout(() => location.reload(), 1500);
+      } catch (err) {
+        console.error('restore failed', err);
+        _imgToast('❌ กู้คืนไม่สำเร็จ: ' + (err && err.message ? err.message : err));
+        setTimeout(() => { const el = document.getElementById('_imgUploadToast'); if (el) el.remove(); }, 4000);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ปิดการเตือนสำรองข้อมูลตามที่ผู้ใช้ต้องการ (ไม่เด้งเตือนใด ๆ)
+  // ยังคงเก็บ/แสดง "วันสำรองล่าสุด" ในหน้าตั้งค่าไว้ตามเดิม
+  function _tryBackupReminder() { /* ปิดการเตือน */ }
+
   /* ===== ZOOM ===== */
   let flowZoom = 1.0;
 
@@ -1834,17 +1963,25 @@
 
     flowNavStack = [];  // reset nav
     currentFlowKey = getFlowKey(selectedDateKey, note.id);
-    initFlowIfNeeded(currentFlowKey, note.text);
 
     const dateLabel = document.getElementById('modalDateLabel').textContent.replace('📅 ', '');
     document.getElementById('flowDateLabel').textContent = dateLabel;
 
     document.getElementById('flowOverlay').classList.add('open');
 
-    // Request fullscreen to hide browser bar (mobile)
+    // Request fullscreen to hide browser bar (mobile) — ต้องเรียกทันทีตอนผู้ใช้กด
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
     if (req) req.call(el).catch(() => {});
+
+    // โหลดเฉพาะผังนี้แบบ lazy (เร็วขึ้นมาก: ไม่ต้องโหลดผังทั้งหมดตอนเปิดแอป)
+    // ถ้ามีในหน่วยความจำ/แคชอยู่แล้วจะวาดทันที ส่วนข้อมูลล่าสุดจาก server จะตามมา
+    if (typeof window.fbOpenFlow === 'function') {
+      window.fbOpenFlow(currentFlowKey, note.text);
+    } else {
+      // โมดูล Firebase ยังโหลดไม่เสร็จ → ค่อยเปิดผังนี้เมื่อพร้อม
+      _pendingFlowInit = { key: currentFlowKey, rootTitle: note.text };
+    }
 
     renderFlow();
     // Auto-fit after render
@@ -1864,6 +2001,8 @@
 
   function closeFlow() {
     document.getElementById('flowOverlay').classList.remove('open');
+    // หยุดฟังผังที่เปิดอยู่ (ประหยัดทรัพยากร/แบนด์วิดท์เมื่อปิดผัง)
+    if (typeof window.fbCloseFlow === 'function') window.fbCloseFlow();
     // Exit fullscreen
     const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
     if (exit && (document.fullscreenElement || document.webkitFullscreenElement)) exit.call(document).catch(() => {});
@@ -2712,6 +2851,52 @@
     renderImageGrid();
   }
 
+  /* ============================================================
+     ตั้งค่า Cloudinary (ที่เก็บรูปภายนอก — รูปจะไม่กินพื้นที่ Firestore)
+     👉 หลังสมัคร Cloudinary แล้ว ให้แก้แค่ 2 บรรทัดนี้:
+        1) CLOUDINARY_CLOUD_NAME    = ชื่อ Cloud ของคุณ (ดูได้ในหน้า Dashboard)
+        2) CLOUDINARY_UPLOAD_PRESET = ชื่อ upload preset ที่ตั้งเป็นแบบ Unsigned
+     ตราบใดที่ยังไม่แก้ (ยังเป็น PUT_...) แอปจะเก็บรูปแบบเดิม (base64) ให้อัตโนมัติ
+     ============================================================ */
+  const CLOUDINARY_CLOUD_NAME    = 'yevlxsrw';
+  const CLOUDINARY_UPLOAD_PRESET = 'sinudom_unsigned';
+
+  function _cloudinaryReady() {
+    return CLOUDINARY_CLOUD_NAME && !CLOUDINARY_CLOUD_NAME.startsWith('PUT_') &&
+           CLOUDINARY_UPLOAD_PRESET && !CLOUDINARY_UPLOAD_PRESET.startsWith('PUT_');
+  }
+
+  // อัปโหลดรูป (รับ dataURL ที่บีบอัดแล้ว) ขึ้น Cloudinary แล้วคืน "ลิงก์รูป" (https)
+  // ถ้ายังไม่ตั้งค่า/อัปไม่สำเร็จ จะ throw เพื่อให้ผู้เรียกใช้ fallback เก็บ base64 แทน (รูปไม่หาย)
+  async function uploadToCloudinary(dataUrl) {
+    if (!_cloudinaryReady()) throw new Error('cloudinary-not-configured');
+    const form = new FormData();
+    form.append('file', dataUrl);
+    form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: 'POST', body: form
+    });
+    if (!res.ok) throw new Error('cloudinary-upload-failed:' + res.status);
+    const json = await res.json();
+    if (!json.secure_url) throw new Error('cloudinary-no-url');
+    return json.secure_url;
+  }
+
+  // แถบแจ้งสถานะเล็ก ๆ ตอนอัปโหลดรูป (สร้าง/ลบเองอัตโนมัติ)
+  function _imgToast(msg) {
+    let el = document.getElementById('_imgUploadToast');
+    if (!msg) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_imgUploadToast';
+      el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);' +
+        'background:rgba(0,0,0,0.82);color:#fff;padding:10px 16px;border-radius:20px;' +
+        'font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.25);';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+  }
+
   // ── ตรวจว่ารองรับ WebP ไหม (คำนวณครั้งเดียว แล้ว cache ไว้) ──
   // WebP เล็กกว่า JPEG ที่คุณภาพใกล้เคียงกันราว 25–35% เบราว์เซอร์ยุคใหม่รองรับหมด
   let _webpSupport = null;
@@ -2781,7 +2966,7 @@
     });
   }
 
-  function handleImageUpload(event) {
+  async function handleImageUpload(event) {
     const files = Array.from(event.target.files);
     // จำกัดไฟล์ดิบ 20MB (ไฟล์ใหญ่กว่านี้อ่านเป็น base64 แล้วเสี่ยงเครื่อง/มือถือค้าง)
     const valid = files.filter(f => {
@@ -2790,14 +2975,30 @@
     });
     event.target.value = '';
     if (!valid.length) return;
-    // ใช้ Promise.allSettled แทนตัวนับ เพื่อให้ grid อัปเดตถูกต้องเสมอแม้ลำดับเสร็จไม่เรียงกัน
-    Promise.allSettled(valid.map(f => compressImage(f))).then(results => {
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled') pendingImages.push(r.value);
-        else alert(`อ่านไฟล์ ${valid[i].name} ไม่สำเร็จ`);
-      });
-      renderImageGrid();
+
+    // 1) บีบอัดรูปทั้งหมดก่อน (ใช้ allSettled เพื่อให้ทำงานถูกต้องแม้บางไฟล์เสร็จไม่เรียงกัน)
+    _imgToast('กำลังเตรียมรูป...');
+    const results = await Promise.allSettled(valid.map(f => compressImage(f)));
+    const dataUrls = [];
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') dataUrls.push(r.value);
+      else alert(`อ่านไฟล์ ${valid[i].name} ไม่สำเร็จ`);
     });
+    if (!dataUrls.length) { _imgToast(''); return; }
+
+    // 2) อัปขึ้น Cloudinary ทีละรูป แล้วเก็บ "ลิงก์" แทน base64 (ประหยัดพื้นที่ Firestore)
+    //    ถ้ายังไม่ตั้งค่า Cloudinary หรืออัปไม่สำเร็จ → เก็บ base64 ไว้ก่อน (รูปไม่หาย ใช้งานได้เหมือนเดิม)
+    for (let i = 0; i < dataUrls.length; i++) {
+      _imgToast(`กำลังอัปโหลดรูป... (${i + 1}/${dataUrls.length})`);
+      try {
+        const url = await uploadToCloudinary(dataUrls[i]);
+        pendingImages.push(url);
+      } catch (e) {
+        pendingImages.push(dataUrls[i]);
+      }
+      renderImageGrid();
+    }
+    _imgToast('');
   }
 
   function saveNodeEdit() {
@@ -3282,51 +3483,153 @@
     }
   }
 
+  // ── โหลดผังแบบ lazy: เปิด/ฟังเฉพาะ "ผังเดียว" ที่กำลังดูอยู่ ─────────────
+  // เดิมโหลดผังทั้งหมด (ทุกเอกสาร รวมรูป base64) ตั้งแต่เปิดแอป ทำให้ช้ามาก
+  // ตอนนี้จะดึงเฉพาะผังที่ผู้ใช้เปิดจริง → เปิดแอปเร็วขึ้น และกินแบนด์วิดท์น้อยลง
+  let _openFlowUnsub = null;
+  let _openFlowKey = null;
+  let _openFlowEverExisted = false;
+
+  window.fbOpenFlow = function(key, rootTitle) {
+    if (!key) return;
+    // ปิด listener ของผังก่อนหน้า
+    if (_openFlowUnsub) { _openFlowUnsub(); _openFlowUnsub = null; }
+    _openFlowKey = key;
+    _openFlowEverExisted = false;
+
+    _openFlowUnsub = onSnapshot(doc(db, 'flows', key), snap => {
+      // อย่าทับขณะกำลังแก้ไข node อยู่ (กันข้อมูลที่กำลังพิมพ์หาย)
+      if (typeof editingNodeId !== 'undefined' && editingNodeId) return;
+      // ถ้าผู้ใช้เปลี่ยนไปเปิดผังอื่นแล้ว ไม่ต้องทำอะไร
+      if (key !== _openFlowKey) return;
+
+      if (snap.exists()) {
+        _openFlowEverExisted = true;
+        try { flowData[key] = JSON.parse(snap.data().data || '{}'); } catch(e){}
+      } else if (!snap.metadata.fromCache && !_openFlowEverExisted && !flowData[key]) {
+        // ยืนยันจาก server แล้วว่าไม่มีผังนี้จริง (ไม่ใช่แค่ยังไม่มีในแคช) และไม่เคยมีมาก่อน
+        // → สร้างผังใหม่ว่าง ๆ ได้อย่างปลอดภัย (ไม่เขียนทับข้อมูลเดิม)
+        if (typeof initFlowIfNeeded === 'function') initFlowIfNeeded(key, rootTitle);
+      }
+
+      // วาดใหม่เฉพาะถ้าผังนี้ยังเปิดอยู่บนหน้าจอ
+      const ov = document.getElementById('flowOverlay');
+      if (ov && ov.classList.contains('open') && typeof currentFlowKey !== 'undefined' &&
+          currentFlowKey === key && typeof renderFlow === 'function') {
+        renderFlow();
+        if (typeof fitScreen === 'function') requestAnimationFrame(() => requestAnimationFrame(fitScreen));
+      }
+    }, err => { console.error('โหลดผังไม่สำเร็จ:', key, err); });
+  };
+
+  window.fbCloseFlow = function() {
+    if (_openFlowUnsub) { _openFlowUnsub(); _openFlowUnsub = null; }
+    _openFlowKey = null;
+    _openFlowEverExisted = false;
+  };
+
+  // ===== BACKUP: ดึงข้อมูลทั้งหมดจาก Firestore =====
+  window.fbExportAll = async function() {
+    const out = {
+      backupDate: new Date().toISOString(),
+      version: 1,
+      flows: {},
+      notes: {},
+      appUsers: [],
+      settings: {}
+    };
+    // flows (เอกสารละ 1 ผัง เก็บเป็น string ใน field data)
+    const flowsSnap = await getDocs(collection(db, 'flows'));
+    flowsSnap.forEach(d => { out.flows[d.id] = d.data(); });
+    // notes (เอกสารละ 1 วัน)
+    const notesSnap = await getDocs(collection(db, 'notes'));
+    notesSnap.forEach(d => { out.notes[d.id] = d.data(); });
+    // appUsers (เก็บ id ไว้ด้วยเพื่อกู้คืนตำแหน่งเดิม)
+    const usersSnap = await getDocs(collection(db, 'appUsers'));
+    usersSnap.forEach(d => { out.appUsers.push(Object.assign({ _id: d.id }, d.data())); });
+    // settings (เอกสารเดี่ยว)
+    for (const key of ['roles', 'perms', 'saoList', 'flowData']) {
+      try {
+        const s = await getDoc(doc(db, 'settings', key));
+        if (s.exists()) out.settings[key] = s.data();
+      } catch (e) { /* ข้ามถ้าไม่มี */ }
+    }
+    return out;
+  };
+
+  // ===== RESTORE: เขียนข้อมูลจากไฟล์กลับเข้า Firestore (เพิ่ม/อัปเดตตาม key) =====
+  window.fbRestoreAll = async function(data) {
+    if (!data || typeof data !== 'object') throw new Error('ข้อมูลไม่ถูกต้อง');
+    const tasks = [];
+    if (data.flows) {
+      for (const k of Object.keys(data.flows)) {
+        tasks.push(setDoc(doc(db, 'flows', k), data.flows[k]));
+      }
+    }
+    if (data.notes) {
+      for (const k of Object.keys(data.notes)) {
+        tasks.push(setDoc(doc(db, 'notes', k), data.notes[k]));
+      }
+    }
+    if (Array.isArray(data.appUsers)) {
+      for (const u of data.appUsers) {
+        const id = u._id;
+        const body = Object.assign({}, u);
+        delete body._id;
+        if (id) tasks.push(setDoc(doc(db, 'appUsers', id), body));
+        else tasks.push(addDoc(collection(db, 'appUsers'), body));
+      }
+    }
+    if (data.settings) {
+      for (const k of Object.keys(data.settings)) {
+        tasks.push(setDoc(doc(db, 'settings', k), data.settings[k]));
+      }
+    }
+    await Promise.all(tasks);
+    return true;
+  };
+
+  // บันทึกวันสำรองล่าสุดขึ้น Firebase (แชร์ให้ทุกเครื่อง/ทุกบัญชี)
+  window.fbSetLastBackup = async function(ms) {
+    try { await setDoc(doc(db, 'settings', 'backupMeta'), { lastBackup: ms }); } catch (e) { console.error('set backup meta failed', e); }
+  };
+
   async function loadFlow() {
     if (typeof flowData === 'undefined') return;
-    // 1) โหลดผังทั้งหมดจาก collection 'flows' (เอกสารแยกต่อผัง)
-    try {
-      const colSnap = await getDocs(collection(db, 'flows'));
-      colSnap.forEach(d => { try { flowData[d.id] = JSON.parse(d.data().data || '{}'); } catch(e){} });
 
-      // 2) ย้ายข้อมูลเก่าจากก้อนเดียว settings/flowData → แยกเป็นเอกสารต่อผัง (ครั้งเดียว, ไม่ลบของเดิมไว้เป็น backup)
-      const oldSnap = await getDoc(doc(db, 'settings', 'flowData'));
-      if (oldSnap.exists()) {
-        let oldData = {};
-        try { oldData = JSON.parse(oldSnap.data().data || '{}'); } catch(e){}
-        for (const k of Object.keys(oldData)) {
-          if (!flowData[k]) {
-            flowData[k] = oldData[k];
-            setDoc(doc(db, 'flows', k), { data: JSON.stringify(oldData[k]) }).catch(()=>{});
-          }
-        }
-      }
-    } catch(e) { console.error('โหลดผังไม่สำเร็จ:', e); }
-
+    // พร้อมใช้งานทันที ไม่ต้องรอโหลดผังทั้งหมด (เปิดแอปเร็วขึ้น)
     window._flowLoaded = true;
 
-    // ถ้าผู้ใช้เปิดผังค้างไว้ระหว่างรอโหลด → สร้าง/วาดให้เรียบร้อย
+    // ถ้าผู้ใช้เปิดผังค้างไว้ก่อนโมดูลพร้อม → เปิดผังนั้นให้เรียบร้อย
     if (_pendingFlowInit) {
       const { key, rootTitle } = _pendingFlowInit;
       _pendingFlowInit = null;
-      if (typeof initFlowIfNeeded === 'function') initFlowIfNeeded(key, rootTitle);
+      if (typeof window.fbOpenFlow === 'function') window.fbOpenFlow(key, rootTitle);
     }
     _redrawFlowIfOpen();
 
-    // 3) ฟังการเปลี่ยนแปลงแบบเรียลไทม์ (merge ทีละเอกสาร ไม่ล้างทั้งก้อน)
-    if (_unsubFlow) { _unsubFlow(); _unsubFlow = null; }
-    _unsubFlow = onSnapshot(collection(db, 'flows'), snap => {
-      // อย่าทับขณะกำลังแก้ไข node อยู่ (กันข้อมูลที่กำลังพิมพ์หาย)
-      if (typeof editingNodeId !== 'undefined' && editingNodeId) return;
-      snap.docChanges().forEach(ch => {
-        if (ch.type === 'removed') { delete flowData[ch.doc.id]; }
-        else { try { flowData[ch.doc.id] = JSON.parse(ch.doc.data().data || '{}'); } catch(e){} }
-      });
-      _redrawFlowIfOpen();
-    });
+    // ย้ายข้อมูลเก่าจากก้อนเดียว settings/flowData → แยกเป็นเอกสารต่อผัง (ทำเบื้องหลัง, ครั้งเดียวต่อเครื่อง)
+    try {
+      if (!localStorage.getItem('_flowMigratedV2')) {
+        const oldSnap = await getDoc(doc(db, 'settings', 'flowData'));
+        if (oldSnap.exists()) {
+          let oldData = {};
+          try { oldData = JSON.parse(oldSnap.data().data || '{}'); } catch(e){}
+          for (const k of Object.keys(oldData)) {
+            // ย้ายเฉพาะผังที่ยังไม่มีเอกสารแยก (กันเขียนทับของใหม่)
+            let exist = null;
+            try { exist = await getDoc(doc(db, 'flows', k)); } catch(e){}
+            if (!exist || !exist.exists()) {
+              setDoc(doc(db, 'flows', k), { data: JSON.stringify(oldData[k]) }).catch(()=>{});
+            }
+          }
+        }
+        localStorage.setItem('_flowMigratedV2', '1');
+      }
+    } catch(e) { console.error('ย้ายข้อมูลผังเก่าไม่สำเร็จ:', e); }
   }
 
-  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao, _unsubFlow, _unsubPerms;
+  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao, _unsubFlow, _unsubPerms, _unsubBackupMeta;
 
   onAuthStateChanged(auth, user => {
     if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
@@ -3335,9 +3638,20 @@
     if (_unsubSao)    { _unsubSao();    _unsubSao    = null; }
     if (_unsubFlow)   { _unsubFlow();   _unsubFlow   = null; }
     if (_unsubPerms)  { _unsubPerms();  _unsubPerms  = null; }
+    if (_unsubBackupMeta) { _unsubBackupMeta(); _unsubBackupMeta = null; }
+    if (typeof window.fbCloseFlow === 'function') window.fbCloseFlow();
     if (!user) return;
 
     loadFlow();
+
+    // โหลด "วันสำรองล่าสุด" จาก Firebase แบบเรียลไทม์ (ทุกเครื่อง/ทุกบัญชีเห็นตรงกัน)
+    _unsubBackupMeta = onSnapshot(doc(db, 'settings', 'backupMeta'), snap => {
+      window._lastBackupServer = (snap.exists() && snap.data().lastBackup) ? snap.data().lastBackup : null;
+      window._backupMetaLoaded = true;
+      if (typeof renderLastBackupInfo === 'function') renderLastBackupInfo();
+      // ลองเตือนสำรอง (จะเด้งจริงเฉพาะคนที่เข้าหน้าตั้งค่าได้ + เกิน 7 วัน)
+      if (typeof _tryBackupReminder === 'function') _tryBackupReminder();
+    });
 
     // โหลดสิทธิ์ (perms) จาก Firestore แบบเรียลไทม์ (เดิมเซฟแต่ไม่เคยโหลดกลับ)
     _unsubPerms = onSnapshot(doc(db, 'settings', 'perms'), snap => {
@@ -3390,6 +3704,8 @@
       if (typeof window.applyRoleVisibility === 'function') window.applyRoleVisibility();
       if (typeof renderUsers === 'function') renderUsers();
       if (typeof renderSaoListUI === 'function') renderSaoListUI();
+      // รู้สิทธิ์แล้ว → ลองเตือนสำรอง (เฉพาะคนที่เข้าหน้าตั้งค่าได้)
+      if (typeof _tryBackupReminder === 'function') _tryBackupReminder();
     });
 
     _unsubSao = onSnapshot(doc(db, 'settings', 'saoList'), snap => {
