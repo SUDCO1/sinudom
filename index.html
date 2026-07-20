@@ -159,6 +159,7 @@
       border-bottom: 1px solid #e5e7eb;
       cursor: pointer; transition: background 0.15s;
       position: relative;
+      min-width: 0;
     }
     .calendar-cell:nth-child(7n) { border-right: none; }
     .calendar-cell:hover { background: #f0f7ff; }
@@ -178,18 +179,17 @@
     .calendar-cell:nth-child(7n+1) .cell-day { color: #e53e3e; }
     .calendar-cell:nth-child(7n+1).other-month .cell-day { color: #f0a0a0; }
 
-    /* ===== NOTES ===== */
+    /* ===== NOTES (colored dots) ===== */
+    .cell-notes-wrap { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 0; align-content: flex-start; }
     .note-item {
-      display: flex; align-items: center; gap: 5px;
-      padding: 3px 7px; border-radius: 4px;
-      font-size: 11.5px; margin-bottom: 3px;
-      cursor: pointer; overflow: hidden;
-      white-space: nowrap; text-overflow: ellipsis;
-      max-width: 100%;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 13px; height: 13px; padding: 0; margin: 0;
+      border-radius: 50%; background: transparent !important;
+      cursor: pointer; flex-shrink: 0;
     }
-    .note-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .note-text { overflow: hidden; text-overflow: ellipsis; }
-    .note-more { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .note-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+    .note-text, .note-time-badge { display: none; }
+    .note-more { display: none; }
 
     /* Color themes */
     .color-green  { background: #dcfce7; color: #166534; }
@@ -684,6 +684,7 @@
     </div>
   </div>
   <div class="navbar-actions">
+    <button class="btn-mobile-settings" id="btnMobileLog" style="display:none;" onclick="toggleMobileLog()" title="บันทึกการใช้งาน">📜</button>
     <button class="btn-mobile-settings" id="btnMobileSettings" onclick="toggleMobileView()" title="ตั้งค่า">⚙️</button>
     <button class="btn-admin" id="navRoleBtn">Admin</button>
     <button class="btn-logout" id="btnLogout">ออกจากระบบ</button>
@@ -694,6 +695,7 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-item active" id="nav-calendar" onclick="showView('calendar')"><span class="sidebar-icon">📅</span> ปฏิทิน</div>
+    <div class="sidebar-item" id="nav-log" style="display:none;" onclick="showView('log')"><span class="sidebar-icon">📜</span> บันทึกการใช้งาน</div>
     <div class="sidebar-item" id="nav-settings" onclick="showView('settings')"><span class="sidebar-icon">⚙️</span> ตั้งค่า</div>
   </div>
 
@@ -807,6 +809,55 @@
           • การกู้คืนจะเขียนข้อมูลจากไฟล์ทับของเดิม (เพิ่ม/อัปเดตตาม key) — ระบบจะถามยืนยันก่อนเสมอ<br>
           • แนะนำให้สำรองอย่างน้อยเดือนละครั้ง
         </div>
+      </div>
+    </div>
+
+    <!-- ===== LOG VIEW ===== -->
+    <div id="logView" style="display:none;">
+      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">📜 บันทึกการใช้งาน (Audit Log)</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">บันทึกกิจกรรมล่าสุด (สูงสุด 300 รายการ) — อัปเดตแบบเรียลไทม์</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="logLiveDot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+            <span style="font-size:12px;color:#6b7280;">Live</span>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 16px;">
+          <input id="logSearch" type="text" placeholder="🔍 ค้นหา (อีเมล / รายละเอียด)..." oninput="renderLogList()"
+            style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+          <select id="logActionFilter" onchange="renderLogList()"
+            style="flex:0 0 200px;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;">
+            <option value="">ทุกประเภท</option>
+          </select>
+        </div>
+
+        <!-- แถบเก็บรักษา/ลบอัตโนมัติ (เฉพาะผู้มีสิทธิ์ลบ) -->
+        <div id="logRetentionBar" style="display:none;align-items:center;flex-wrap:wrap;gap:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+          <span style="font-size:13px;color:#374151;">🗓️ ลบบันทึกอัตโนมัติเมื่อเก่าเกิน</span>
+          <input id="logRetentionDays" type="number" min="0" step="1" value="0"
+            style="width:80px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;text-align:center;" />
+          <span style="font-size:13px;color:#374151;">วัน</span>
+          <button onclick="saveLogRetention()"
+            style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">บันทึก</button>
+          <span id="logRetentionHint" style="font-size:12px;color:#9ca3af;">0 = เก็บถาวร (ไม่ลบอัตโนมัติ)</span>
+        </div>
+
+        <!-- แถบเลือก/ลบด้วยมือ (เฉพาะผู้มีสิทธิ์ลบ) -->
+        <div id="logDeleteBar" style="display:none;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:10px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;cursor:pointer;user-select:none;">
+            <input id="logSelectAll" type="checkbox" onchange="toggleSelectAllLogs(this.checked)" style="width:16px;height:16px;cursor:pointer;" />
+            เลือกทั้งหมด
+          </label>
+          <button id="btnDeleteSelectedLogs" onclick="deleteSelectedLogs()" disabled
+            style="background:#ef4444;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;opacity:0.5;">🗑️ ลบที่เลือก (0)</button>
+        </div>
+
+        <div id="logList" style="min-height:60px;"></div>
       </div>
     </div>
 
@@ -1069,25 +1120,242 @@
       alert(currentRole() ? 'หน้าตั้งค่าใช้ได้เฉพาะ Admin เท่านั้น' : 'กำลังโหลดข้อมูลสิทธิ์ กรุณาลองใหม่อีกครั้งสักครู่');
       view = 'calendar';
     }
+    if (view === 'log' && !canViewLog()) {
+      alert(currentRole() ? 'คุณไม่มีสิทธิ์ดูหน้าบันทึกการใช้งาน (ติดต่อ Admin)' : 'กำลังโหลดข้อมูลสิทธิ์ กรุณาลองใหม่อีกครั้งสักครู่');
+      view = 'calendar';
+    }
+    // ยกเลิกการติดตาม log เมื่อออกจากหน้า log
+    if (_currentView === 'log' && view !== 'log' && typeof window.fbUnsubscribeLogs === 'function') window.fbUnsubscribeLogs();
     _currentView = view;
     document.getElementById('calendarView').style.display   = view === 'calendar' ? '' : 'none';
     document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
+    document.getElementById('logView').style.display        = view === 'log' ? '' : 'none';
     document.getElementById('nav-calendar').classList.toggle('active', view === 'calendar');
     document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
+    const navLog = document.getElementById('nav-log');
+    if (navLog) navLog.classList.toggle('active', view === 'log');
     const btn = document.getElementById('btnMobileSettings');
     if (btn) btn.textContent = view === 'settings' ? '📅' : '⚙️';
+    const btnL = document.getElementById('btnMobileLog');
+    if (btnL) btnL.textContent = view === 'log' ? '📅' : '📜';
     if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); renderLastBackupInfo(); }
+    if (view === 'log') renderLogView();
   }
   function toggleMobileView() {
     showView(_currentView === 'settings' ? 'calendar' : 'settings');
   }
+  function toggleMobileLog() {
+    showView(_currentView === 'log' ? 'calendar' : 'log');
+  }
+
+  // ===== LOG: metadata, capture & rendering =====
+  const LOG_ACTIONS = {
+    'auth.login':       { label:'เข้าสู่ระบบ',        icon:'🔑', color:'#22c55e' },
+    'auth.logout':      { label:'ออกจากระบบ',         icon:'🚪', color:'#64748b' },
+    'note.add':         { label:'เพิ่ม/แก้ไขโน้ต',     icon:'📝', color:'#3b82f6' },
+    'note.delete':      { label:'ลบโน้ต',             icon:'🗑️', color:'#ef4444' },
+    'flow.node.add':    { label:'เพิ่มโหนดผังงาน',     icon:'➕', color:'#3b82f6' },
+    'flow.node.edit':   { label:'แก้ไขโหนดผังงาน',    icon:'✏️', color:'#f59e0b' },
+    'flow.node.delete': { label:'ลบโหนดผังงาน',       icon:'🗑️', color:'#ef4444' },
+    'user.add':         { label:'เพิ่มผู้ใช้',          icon:'👤', color:'#3b82f6' },
+    'user.role':        { label:'เปลี่ยนสิทธิ์ผู้ใช้',   icon:'🏷️', color:'#f59e0b' },
+    'user.delete':      { label:'ลบผู้ใช้',            icon:'🗑️', color:'#ef4444' },
+    'perms.save':       { label:'บันทึกสิทธิ์',        icon:'🔐', color:'#8b5cf6' },
+    'role.add':         { label:'เพิ่มตำแหน่ง',        icon:'➕', color:'#3b82f6' },
+    'role.delete':      { label:'ลบตำแหน่ง',          icon:'🗑️', color:'#ef4444' },
+    'backup':           { label:'สำรองข้อมูล',        icon:'💾', color:'#0ea5e9' },
+    'restore':          { label:'กู้คืนข้อมูล',        icon:'♻️', color:'#f59e0b' },
+    'sao.add':          { label:'เพิ่มเสา',            icon:'➕', color:'#3b82f6' },
+    'sao.delete':       { label:'ลบเสา',              icon:'🗑️', color:'#ef4444' },
+    'log.delete':       { label:'ลบบันทึกการใช้งาน',   icon:'🗑️', color:'#ef4444' },
+    'log.retention':    { label:'ตั้งค่าเก็บบันทึก',    icon:'🗓️', color:'#8b5cf6' },
+  };
+  function logMeta(action){ return LOG_ACTIONS[action] || { label: action, icon:'•', color:'#64748b' }; }
+
+  // เรียกเมื่อมีการกระทำ — เขียน log แบบไม่บล็อก (ไม่ throw ถ้าพัง)
+  function logAction(action, target, detail) {
+    try { if (typeof window.fbLog === 'function') window.fbLog(action, target || '', detail || ''); } catch (e) {}
+  }
+  window.logAction = logAction;
+
+  let _logData = [];
+  let _logSelected = new Set();   // id ที่ถูกติ๊กไว้
+  function renderLogView() {
+    const sel = document.getElementById('logActionFilter');
+    if (sel && sel.options.length <= 1) {
+      Object.keys(LOG_ACTIONS).forEach(a => {
+        const o = document.createElement('option');
+        o.value = a; o.textContent = logMeta(a).icon + ' ' + logMeta(a).label;
+        sel.appendChild(o);
+      });
+    }
+    // แสดง/ซ่อนแถบลบและตั้งค่าเก็บรักษา ตามสิทธิ์
+    const canDel = canDeleteLog();
+    const retBar = document.getElementById('logRetentionBar');
+    const delBar = document.getElementById('logDeleteBar');
+    if (retBar) retBar.style.display = canDel ? 'flex' : 'none';
+    if (delBar) delBar.style.display = canDel ? 'flex' : 'none';
+    _logSelected.clear();
+    if (canDel) {
+      // โหลดค่าจำนวนวันเก็บรักษาปัจจุบัน แล้วลบของเก่าอัตโนมัติ
+      if (typeof window.fbGetLogRetention === 'function') {
+        window.fbGetLogRetention().then(days => {
+          const inp = document.getElementById('logRetentionDays');
+          if (inp) inp.value = days;
+          if (days > 0 && typeof window.fbPurgeOldLogs === 'function') window.fbPurgeOldLogs(days);
+        });
+      }
+    }
+    const list = document.getElementById('logList');
+    if (list) list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;">กำลังโหลด...</div>';
+    if (typeof window.fbSubscribeLogs === 'function') {
+      window.fbSubscribeLogs(function(rows){ _logData = rows || []; renderLogList(); });
+    } else if (list) {
+      list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;">ยังเชื่อมต่อฐานข้อมูลไม่สำเร็จ</div>';
+    }
+  }
+
+  function _logTime(r) {
+    const ms = r.tsClient || (r.ts && r.ts.toMillis ? r.ts.toMillis() : 0);
+    if (!ms) return '';
+    const d = new Date(ms);
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear() + 543;
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mn = String(d.getMinutes()).padStart(2,'0');
+    return `${dd}/${mm}/${yy} ${hh}:${mn}`;
+  }
+
+  function _logEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderLogList() {
+    const cont = document.getElementById('logList');
+    if (!cont) return;
+    const q  = (document.getElementById('logSearch')?.value || '').trim().toLowerCase();
+    const af = document.getElementById('logActionFilter')?.value || '';
+    let rows = _logData.slice();
+    if (af) rows = rows.filter(r => r.action === af);
+    if (q) rows = rows.filter(r =>
+      (r.email||'').toLowerCase().includes(q) ||
+      (r.detail||'').toLowerCase().includes(q) ||
+      (r.target||'').toLowerCase().includes(q) ||
+      (logMeta(r.action).label||'').toLowerCase().includes(q)
+    );
+    if (!rows.length) {
+      cont.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;">ไม่มีรายการ</div>';
+      updateLogDeleteBar();
+      return;
+    }
+    const canDel = canDeleteLog();
+    cont.innerHTML = rows.map(r => {
+      const m = logMeta(r.action);
+      const roleBadge = r.role ? `<span style="font-size:11px;color:#6b7280;">(${_logEsc(r.role)})</span>` : '';
+      const detail = r.detail ? `<div style="font-size:12px;color:#6b7280;margin-top:3px;white-space:pre-wrap;word-break:break-word;">${_logEsc(r.detail)}</div>` : '';
+      const target = r.target ? `<span style="font-size:12px;color:#374151;font-weight:600;"> · ${_logEsc(r.target)}</span>` : '';
+      const checked = _logSelected.has(r.id) ? 'checked' : '';
+      const chk = canDel
+        ? `<input type="checkbox" ${checked} onchange="onLogCheckToggle('${_logEsc(r.id)}', this.checked)" style="flex:0 0 auto;width:16px;height:16px;margin-top:9px;cursor:pointer;" />`
+        : '';
+      return `<div style="display:flex;gap:12px;padding:12px 4px;border-bottom:1px solid #f1f5f9;">
+        ${chk}
+        <div style="flex:0 0 auto;width:32px;height:32px;border-radius:8px;background:${m.color}22;display:flex;align-items:center;justify-content:center;font-size:16px;">${m.icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;color:#1f2937;"><span style="font-weight:600;color:${m.color};">${_logEsc(m.label)}</span>${target}</div>
+          ${detail}
+          <div style="font-size:11px;color:#9ca3af;margin-top:3px;">${_logEsc(r.email||'—')} ${roleBadge} · ${_logTime(r)}</div>
+        </div>
+      </div>`;
+    }).join('');
+    updateLogDeleteBar();
+  }
+
+  // ---- การเลือก/ลบบันทึกด้วยมือ ----
+  function _visibleLogRows() {
+    const q  = (document.getElementById('logSearch')?.value || '').trim().toLowerCase();
+    const af = document.getElementById('logActionFilter')?.value || '';
+    let rows = _logData.slice();
+    if (af) rows = rows.filter(r => r.action === af);
+    if (q) rows = rows.filter(r =>
+      (r.email||'').toLowerCase().includes(q) ||
+      (r.detail||'').toLowerCase().includes(q) ||
+      (r.target||'').toLowerCase().includes(q) ||
+      (logMeta(r.action).label||'').toLowerCase().includes(q)
+    );
+    return rows;
+  }
+  function onLogCheckToggle(id, on) {
+    if (on) _logSelected.add(id); else _logSelected.delete(id);
+    updateLogDeleteBar();
+  }
+  function toggleSelectAllLogs(on) {
+    const rows = _visibleLogRows();
+    if (on) rows.forEach(r => _logSelected.add(r.id));
+    else rows.forEach(r => _logSelected.delete(r.id));
+    renderLogList();
+  }
+  function updateLogDeleteBar() {
+    const btn = document.getElementById('btnDeleteSelectedLogs');
+    const n = _logSelected.size;
+    if (btn) {
+      btn.textContent = `🗑️ ลบที่เลือก (${n})`;
+      btn.disabled = n === 0;
+      btn.style.opacity = n === 0 ? '0.5' : '1';
+    }
+    // sync กล่อง "เลือกทั้งหมด"
+    const all = document.getElementById('logSelectAll');
+    if (all) {
+      const rows = _visibleLogRows();
+      all.checked = rows.length > 0 && rows.every(r => _logSelected.has(r.id));
+    }
+  }
+  async function deleteSelectedLogs() {
+    if (!canDeleteLog()) { alert(denyMsg()); return; }
+    const ids = Array.from(_logSelected);
+    if (!ids.length) return;
+    if (!confirm(`ยืนยันลบบันทึก ${ids.length} รายการ? การลบไม่สามารถกู้คืนได้`)) return;
+    const btn = document.getElementById('btnDeleteSelectedLogs');
+    if (btn) { btn.disabled = true; btn.textContent = 'กำลังลบ...'; }
+    try {
+      if (typeof window.fbDeleteLogs === 'function') await window.fbDeleteLogs(ids);
+      logAction('log.delete', '', `ลบบันทึกการใช้งาน ${ids.length} รายการ`);
+      _logSelected.clear();
+      // รายการจะอัปเดตเองผ่าน onSnapshot; รีเฟรชแถบปุ่มไว้ก่อน
+      updateLogDeleteBar();
+    } catch (e) {
+      alert('ลบไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e) + '\n(อาจต้องปรับ Firestore Rules ให้ลบ logs ได้)');
+      updateLogDeleteBar();   // คืนสภาพปุ่ม (ข้อความ+จำนวน) ตามที่ยังเลือกอยู่
+    }
+  }
+  async function saveLogRetention() {
+    if (!canDeleteLog()) { alert(denyMsg()); return; }
+    const inp = document.getElementById('logRetentionDays');
+    const days = Math.max(0, Math.floor(Number(inp?.value) || 0));
+    try {
+      if (typeof window.fbSetLogRetention === 'function') await window.fbSetLogRetention(days);
+      logAction('log.retention', '', days > 0 ? `ตั้งค่าเก็บบันทึก ${days} วัน` : 'ตั้งค่าเก็บบันทึกถาวร (ไม่ลบอัตโนมัติ)');
+      if (days > 0 && typeof window.fbPurgeOldLogs === 'function') await window.fbPurgeOldLogs(days);
+      const hint = document.getElementById('logRetentionHint');
+      if (hint) { hint.textContent = 'บันทึกแล้ว ✓'; hint.style.color = '#16a34a'; setTimeout(() => { hint.textContent = '0 = เก็บถาวร (ไม่ลบอัตโนมัติ)'; hint.style.color = '#9ca3af'; }, 2500); }
+    } catch (e) {
+      alert('บันทึกไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e));
+    }
+  }
+  window.onLogCheckToggle = onLogCheckToggle;
+  window.toggleSelectAllLogs = toggleSelectAllLogs;
+  window.deleteSelectedLogs = deleteSelectedLogs;
+  window.saveLogRetention = saveLogRetention;
+  window.renderLogView = renderLogView;
+  window.renderLogList = renderLogList;
 
   // ===== SETTINGS: PERMISSIONS =====
   // ส่วนงานจริงในแอป (ของเดิมเป็นชื่อแผนกสมมติที่ไม่ตรงกับหน้าจอจริง จึงบังคับสิทธิ์ไม่ได้)
   const SETTINGS_LABEL = 'ตั้งค่า (Settings)';
+  const LOG_LABEL = 'บันทึกการใช้งาน (Log)';
   const PAGES = [
     { icon:'📅', label:'ปฏิทิน/โน้ต' },
     { icon:'🔀', label:'ผังงาน (Flowchart)' },
+    { icon:'📜', label: LOG_LABEL, accessOnly:true },
     { icon:'⚙️', label: SETTINGS_LABEL, accessOnly:true },
   ];
 
@@ -1117,6 +1385,23 @@
     const p = perms[SETTINGS_LABEL] && perms[SETTINGS_LABEL][role];
     return !!(p && p.read);
   }
+  // ใครดูหน้าบันทึกการใช้งานได้บ้าง: Admin เสมอ + ตำแหน่งที่ถูกติ๊ก "เข้าถึง" หน้า Log
+  function canViewLog() {
+    if (isAdmin()) return true;
+    const role = currentRole();
+    if (!role) return false;
+    const p = perms[LOG_LABEL] && perms[LOG_LABEL][role];
+    return !!(p && p.read);
+  }
+  // ใครลบบันทึก/ตั้งค่าลบอัตโนมัติได้บ้าง: Admin เสมอ + ตำแหน่งที่ถูกติ๊กสิทธิ์ "ลบ" หน้า Log
+  function canDeleteLog() {
+    if (isAdmin()) return true;
+    const role = currentRole();
+    if (!role) return false;
+    const p = perms[LOG_LABEL] && perms[LOG_LABEL][role];
+    return !!(p && p.del);
+  }
+  window.canDeleteLog = canDeleteLog;
   // ซ่อนเมนูตั้งค่าสำหรับผู้ที่ไม่มีสิทธิ์เข้า (โมดูล Firebase เรียกหลังรู้ role)
   window.applyRoleVisibility = function() {
     const show = canAccessSettings();
@@ -1126,6 +1411,13 @@
     if (mob) mob.style.display = show ? '' : 'none';
     // ถ้าผู้ใช้ที่ไม่ใช่ Admin ค้างอยู่หน้าตั้งค่า ให้เด้งกลับปฏิทิน
     if (!show && _currentView === 'settings') showView('calendar');
+    // เมนูบันทึกการใช้งาน (Log)
+    const showLog = canViewLog();
+    const navLog = document.getElementById('nav-log');
+    if (navLog) navLog.style.display = showLog ? '' : 'none';
+    const mobLog = document.getElementById('btnMobileLog');
+    if (mobLog) mobLog.style.display = showLog ? '' : 'none';
+    if (!showLog && _currentView === 'log') showView('calendar');
   };
 
   // roles: array of { name, color }
@@ -1154,6 +1446,7 @@
     try {
       if (typeof window.fbSavePerms === 'function') await window.fbSavePerms(perms);
       if (typeof window.fbSaveRoles === 'function') await window.fbSaveRoles(roles);
+      logAction('perms.save', '', 'บันทึกตารางสิทธิ์การเข้าถึง');
       alert('บันทึกสิทธิ์เรียบร้อย');
     } catch (e) {
       alert('บันทึกสิทธิ์ไม่สำเร็จ (อาจไม่มีสิทธิ์ หรือเครือข่ายมีปัญหา): ' + (e?.message || e));
@@ -1172,6 +1465,7 @@
     const color = COLOR_PALETTE[paletteIdx++ % COLOR_PALETTE.length];
     roles.push({ name: trimmed, color });
     ensurePerms();
+    logAction('role.add', trimmed, 'เพิ่มตำแหน่ง: ' + trimmed);
     renderPermTable();
     renderRoleChips();
     // also refresh user dropdown
@@ -1182,6 +1476,7 @@
     if (!confirm(`ลบตำแหน่ง "${name}" ?`)) return;
     roles = roles.filter(r => r.name !== name);
     PAGES.forEach(p => { if (perms[p.label]) delete perms[p.label][name]; });
+    logAction('role.delete', name, 'ลบตำแหน่ง: ' + name);
     try {
       if (typeof window.fbSaveRoles === 'function') await window.fbSaveRoles(roles);
       if (typeof window.fbSavePerms === 'function') await window.fbSavePerms(perms);
@@ -1241,7 +1536,17 @@
       roles.forEach(role => {
         const perm = perms[p.label][role.name];
         if (p.accessOnly) {
-          cells += `<td style="padding:8px 12px;text-align:center;"><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" ${perm.read?'checked':''} onchange="togglePerm('${p.label}','${role.name}','read',this.checked)"> เข้าถึง</label></td>`;
+          // หน้า Log: ให้ตั้งสิทธิ์ "เข้าถึง" (ดู) และ "ลบได้" แยกกัน
+          if (p.label === LOG_LABEL) {
+            cells += `<td style="padding:8px 12px;text-align:center;">
+              <div style="display:inline-flex;gap:6px;">
+                <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;"><input type="checkbox" ${perm.read?'checked':''} onchange="togglePerm('${p.label}','${role.name}','read',this.checked)"> เข้าถึง</label>
+                <label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;"><input type="checkbox" ${perm.del?'checked':''} onchange="togglePerm('${p.label}','${role.name}','del',this.checked)"> ลบได้</label>
+              </div>
+            </td>`;
+          } else {
+            cells += `<td style="padding:8px 12px;text-align:center;"><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" ${perm.read?'checked':''} onchange="togglePerm('${p.label}','${role.name}','read',this.checked)"> เข้าถึง</label></td>`;
+          }
           return;
         }
         cells += `<td style="padding:8px 12px;text-align:center;">
@@ -1318,7 +1623,10 @@
     });
   }
 
+  const _roleBeforeEdit = {};
   function changeRole(i, val) {
+    // จำ role เดิมไว้ก่อนเปลี่ยน (เพื่อใช้ทำ before/after ตอนบันทึก log)
+    if (users[i]._id && !(users[i]._id in _roleBeforeEdit)) _roleBeforeEdit[users[i]._id] = users[i].role;
     users[i].role = val;
     // จดไว้ว่ายังไม่ได้บันทึก เพื่อให้ snapshot ไม่ทับค่านี้
     if (users[i]._id) _pendingRoleEdits[users[i]._id] = val;
@@ -1332,6 +1640,9 @@
       if (u._id && typeof window.fbUpdateUserRole === 'function') {
         await window.fbUpdateUserRole(u._id, u.role);
       }
+      const oldRole = (u._id && u._id in _roleBeforeEdit) ? _roleBeforeEdit[u._id] : '?';
+      logAction('user.role', u.email, 'เปลี่ยนสิทธิ์: ' + oldRole + ' → ' + u.role);
+      if (u._id) delete _roleBeforeEdit[u._id];
       // บันทึกสำเร็จแล้ว → ไม่ต้องกันการทับอีก
       if (u._id) delete _pendingRoleEdits[u._id];
       renderUsers();
@@ -1350,6 +1661,7 @@
       try { await window.fbDeleteUser(u._id); }
       catch (e) { return alert('ลบผู้ใช้ไม่สำเร็จ (อาจไม่มีสิทธิ์): ' + (e?.message || e)); }
     }
+    logAction('user.delete', u.email, 'ลบผู้ใช้: ' + u.email + ' (สิทธิ์ ' + (u.role || '-') + ')');
     users.splice(i, 1);
     renderUsers();
   }
@@ -1365,7 +1677,7 @@
       // ส่ง password ไปด้วย (เดิมไม่ได้ส่ง ทำให้สร้างผู้ใช้ไม่ได้)
       // ไม่ต้อง push เอง เพราะ onSnapshot ของ appUsers จะอัปเดตรายชื่อให้อัตโนมัติ
       window.fbAddUser(email, role, pass)
-        .then(() => { alert('เพิ่มผู้ใช้ ' + email + ' เรียบร้อย'); })
+        .then(() => { logAction('user.add', email, 'เพิ่มผู้ใช้: ' + email + ' (สิทธิ์ ' + role + ')'); alert('เพิ่มผู้ใช้ ' + email + ' เรียบร้อย'); })
         .catch(err => {
           const map = {
             'auth/email-already-in-use': 'อีเมลนี้มีบัญชีอยู่แล้ว',
@@ -1418,17 +1730,21 @@
     let cells = [];
 
     // Prev month padding
+    // normalize เดือนให้เป็น 0–11 เสมอ (เดิมปล่อยเป็น -1 ทำให้ getDateKey สร้าง key เพี้ยน "YYYY-00")
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     for (let i = firstDay - 1; i >= 0; i--) {
-      cells.push({ day: daysInPrev - i, month: currentMonth - 1, year: currentMonth === 0 ? currentYear - 1 : currentYear, other: true });
+      cells.push({ day: daysInPrev - i, month: prevMonth, year: currentMonth === 0 ? currentYear - 1 : currentYear, other: true });
     }
     // Current month
     for (let d = 1; d <= daysInMonth; d++) {
       cells.push({ day: d, month: currentMonth, year: currentYear, other: false });
     }
     // Next month padding
+    // normalize เดือนให้เป็น 0–11 เสมอ (เดิมปล่อยเป็น 12 ทำให้ getDateKey สร้าง key เพี้ยน "YYYY-13")
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
     let remaining = 42 - cells.length;
     for (let d = 1; d <= remaining; d++) {
-      cells.push({ day: d, month: currentMonth + 1, year: currentMonth === 11 ? currentYear + 1 : currentYear, other: true });
+      cells.push({ day: d, month: nextMonth, year: currentMonth === 11 ? currentYear + 1 : currentYear, other: true });
     }
 
     cells.forEach(cell => {
@@ -1450,9 +1766,9 @@
       daySpan.textContent = cell.day;
       div.appendChild(daySpan);
 
-      // Notes (max 3, then "+N more") — sorted by time
+      // Notes as colored dots — sorted by time
       const sorted = [...dayNotes].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-      const shown = sorted.slice(0, 3);
+      const shown = sorted;
       const notesWrap = document.createElement('div');
       notesWrap.className = 'cell-notes-wrap';
       shown.forEach(note => {
@@ -1469,12 +1785,6 @@
         notesWrap.appendChild(item);
       });
       div.appendChild(notesWrap);
-      if (dayNotes.length > 3) {
-        const more = document.createElement('div');
-        more.className = 'note-more';
-        more.textContent = `+${dayNotes.length - 3} รายการ`;
-        notesWrap.appendChild(more);
-      }
 
       div.addEventListener('click', () => openModal(cell.year, cell.month, cell.day));
       body.appendChild(div);
@@ -1550,6 +1860,7 @@
     notes[selectedDateKey].splice(idx, 1);
     if (notes[selectedDateKey].length === 0) delete notes[selectedDateKey];
     saveToStorage();
+    logAction('note.delete', selectedDateKey, note ? ('เสา/โน้ต: ' + (note.sao || note.text || '') + (note.detail ? ' — ' + note.detail : '')) : '');
     renderModalNotes();
     renderCalendar();
   }
@@ -1567,6 +1878,7 @@
     if (!notes[selectedDateKey]) notes[selectedDateKey] = [];
     notes[selectedDateKey].push({ id: uid('note_'), text: sao || text, sao, detail: text, color: selectedColor, time });
     saveToStorage();
+    logAction('note.add', selectedDateKey, 'เสา/โน้ต: ' + (sao || text) + (text && sao ? ' — ' + text : '') + (time ? ' (เวลา ' + time + ')' : ''));
 
     input.value = '';
     document.getElementById('timeInput').value = '';
@@ -1682,15 +1994,17 @@
     const val = inp ? inp.value.trim() : '';
     if (!val) return;
     const list = getSaoList();
-    if (!list.includes(val)) { list.push(val); saveSaoList(list); }
+    if (!list.includes(val)) { list.push(val); saveSaoList(list); logAction('sao.add', val, 'เพิ่มเสา: ' + val); }
     if (inp) inp.value = '';
     renderSaoListUI();
     renderSaoDropdown();
   }
   function deleteSao(idx) {
     const list = getSaoList();
+    const removed = list[idx];
     list.splice(idx, 1);
     saveSaoList(list);
+    logAction('sao.delete', removed || '', 'ลบเสา: ' + (removed || ''));
     renderSaoListUI();
     renderSaoDropdown();
   }
@@ -1746,6 +2060,7 @@
       localStorage.setItem('_lastBackup', String(now));
       // บันทึกวันสำรองล่าสุดขึ้น Firebase ด้วย เพื่อให้ทุกเครื่อง/ทุกบัญชีเห็นตรงกัน
       if (typeof window.fbSetLastBackup === 'function') window.fbSetLastBackup(now);
+      logAction('backup', '', 'ดาวน์โหลดไฟล์สำรองข้อมูล');
       renderLastBackupInfo();
       _imgToast('✅ สำรองข้อมูลเรียบร้อย');
       setTimeout(() => { const t = document.getElementById('_imgUploadToast'); if (t) t.remove(); }, 2500);
@@ -1790,6 +2105,7 @@
       const t = _imgToast('กำลังกู้คืนข้อมูล...');
       try {
         await window.fbRestoreAll(data);
+        try { if (window.fbLog) await window.fbLog('restore', '', 'กู้คืนข้อมูลจากไฟล์สำรอง (วันที่ไฟล์: ' + (data.backupDate || 'ไม่ทราบ') + ')'); } catch(e){}
         _imgToast('✅ กู้คืนข้อมูลเรียบร้อย กำลังโหลดหน้าใหม่...');
         setTimeout(() => location.reload(), 1500);
       } catch (err) {
@@ -1963,6 +2279,8 @@
 
     flowNavStack = [];  // reset nav
     currentFlowKey = getFlowKey(selectedDateKey, note.id);
+    // เก็บบริบทผังไว้ใช้ตอนบันทึก log (เสา/โน้ต + วันที่)
+    window._flowLabel = (note.sao || note.text || 'ผังงาน') + ' (' + selectedDateKey + ')';
 
     const dateLabel = document.getElementById('modalDateLabel').textContent.replace('📅 ', '');
     document.getElementById('flowDateLabel').textContent = dateLabel;
@@ -2260,6 +2578,8 @@
     if (dir === 'right') flow.nodes[parentId].rightId = newId;
     else                 flow.nodes[parentId].downId  = newId;
     saveFlowData();
+    const parentTitle = (flow.nodes[parentId] && flow.nodes[parentId].title) || '';
+    logAction('flow.node.add', window._flowLabel || '', 'เพิ่มหัวข้อใหม่ใต้ "' + parentTitle + '"');
     renderFlow();
   }
 
@@ -2273,6 +2593,7 @@
       `ลบ "${node.title}" ?`,
       'หัวข้อย่อยทั้งหมดจะถูกลบด้วย',
       () => {
+        const removedTitle = node.title || '';
         Object.values(flow.nodes).forEach(n => {
           if (n.rightId === id) n.rightId = null;
           if (n.downId  === id) n.downId  = null;
@@ -2284,6 +2605,7 @@
           delete flow.nodes[nid];
         })(id);
         saveFlowData();
+        logAction('flow.node.delete', window._flowLabel || '', 'ลบหัวข้อ "' + removedTitle + '" (รวมหัวข้อย่อยทั้งหมด)');
         renderFlow();
       }
     );
@@ -2743,7 +3065,10 @@
       numInput.focus();
     }
 
-    applyTitleTemplate(btn.dataset.title, btn.dataset.title === selectedNodeTitle ? (window._editingNodeTemplateValues || {}) : {});
+    // เอาค่าที่บันทึกไว้เดิมมาเติม เฉพาะเมื่อเลือกหัวข้อ "เดิม" ของโหนดที่กำลังแก้อยู่
+    // (เดิมเทียบกับ selectedNodeTitle ที่เพิ่งถูกตั้งค่าไปด้านบน จึงเป็นจริงเสมอ)
+    const reuse = btn.dataset.title === window._editingNodeTitleBase;
+    applyTitleTemplate(btn.dataset.title, reuse ? (window._editingNodeTemplateValues || {}) : {});
   }
 
   function updateTitlePreview() {
@@ -2808,6 +3133,9 @@
       b.style.outline = 'none'; b.style.fontWeight = 'normal';
       if (b.dataset.type === savedType) { b.style.outline = '2px solid #1a3a6b'; b.style.fontWeight = '700'; }
     });
+
+    // จำหัวข้อเดิมของโหนดไว้ เพื่อให้ pickNodeTitle รู้ว่าควรเติมค่าที่บันทึกไว้เมื่อใด
+    window._editingNodeTitleBase = selectedNodeTitle;
 
     // Apply template with saved field values
     applyTitleTemplate(selectedNodeTitle, node.templateValues || {});
@@ -3007,6 +3335,8 @@
     const _flow = flowData[currentFlowKey];
     if (!_flow || !_flow.nodes[editingNodeId]) return alert('กำลังโหลดผัง กรุณาลองใหม่อีกครั้งสักครู่');
     const node = _flow.nodes[editingNodeId];
+    // เก็บค่าก่อนแก้ไว้ทำ before/after
+    const before = { title: node.title || '', memo: node.memo || '', detail: node.detail || '', imgCount: (node.images || []).length };
     if (selectedNodeTitle && selectedNodeTitle !== 'custom') {
       const num = document.getElementById('neTitleNumber').value.trim();
       node.title = selectedNodeTitle + (num ? num : '');
@@ -3024,6 +3354,14 @@
     node.nodeType = activeType ? activeType.dataset.type : 'auto';
     // บันทึกแบบไม่รอ (เก็บลง local cache ทันที + sync ขึ้น server เบื้องหลัง)
     saveFlowData();
+    // สร้างรายละเอียดการเปลี่ยนแปลง (before → after)
+    const after = { title: node.title || '', memo: node.memo || '', detail: node.detail || '', imgCount: (node.images || []).length };
+    const changes = [];
+    if (before.title !== after.title)   changes.push('ชื่อ: "' + before.title + '" → "' + after.title + '"');
+    if (before.memo !== after.memo)     changes.push('บันทึกย่อ: "' + before.memo + '" → "' + after.memo + '"');
+    if (before.detail !== after.detail) changes.push('รายละเอียด: "' + before.detail + '" → "' + after.detail + '"');
+    if (before.imgCount !== after.imgCount) changes.push('รูปภาพ: ' + before.imgCount + ' → ' + after.imgCount + ' รูป');
+    logAction('flow.node.edit', window._flowLabel || '', changes.length ? changes.join('\n') : ('แก้ไขหัวข้อ "' + after.title + '" (ไม่มีการเปลี่ยนแปลงเนื้อหา)'));
     closeNodeEdit();
     renderFlow();
   }
@@ -3058,6 +3396,8 @@
     if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
     if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
     renderCalendar();
+    // เปลี่ยนเดือน → โหลดโน้ตของเดือนใหม่ (ถ้าล็อกอินแล้ว)
+    if (typeof window.fbSubscribeNotes === 'function') window.fbSubscribeNotes();
   }
 
   function goToday() {
@@ -3065,6 +3405,7 @@
     currentYear  = t.getFullYear();
     currentMonth = t.getMonth();
     renderCalendar();
+    if (typeof window.fbSubscribeNotes === 'function') window.fbSubscribeNotes();
   }
 
   /* ===== UTILS ===== */
@@ -3256,7 +3597,8 @@
   import {
     getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
     doc, getDoc, setDoc, collection,
-    getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp, onSnapshot
+    getDocs, addDoc, deleteDoc, updateDoc, serverTimestamp, onSnapshot,
+    query, orderBy, startAt, endAt, documentId, limit, where, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -3282,6 +3624,107 @@
     db = getFirestore(app); // เผื่อเบราว์เซอร์ไม่รองรับ IndexedDB
   }
 
+  // ── Audit Log ───────────────────────────────────────────────
+  // เขียน log แบบไม่บล็อกและไม่ throw — พังเมื่อไรก็ไม่กระทบงานหลัก
+  window.fbLog = async function(action, target, detail) {
+    try {
+      if (!auth.currentUser) return;
+      await addDoc(collection(db, 'logs'), {
+        ts: serverTimestamp(),
+        tsClient: Date.now(),
+        email: auth.currentUser.email || '',
+        role: window._currentRole || '',
+        action: action || '',
+        target: target || '',
+        detail: detail || ''
+      });
+    } catch (e) { /* เงียบไว้ — log ไม่ควรทำให้งานหลักล้ม */ }
+  };
+
+  let _unsubLogs = null;
+  window.fbSubscribeLogs = function(cb) {
+    try { if (_unsubLogs) { _unsubLogs(); _unsubLogs = null; } } catch(e){}
+    try {
+      const qLogs = query(collection(db, 'logs'), orderBy('tsClient', 'desc'), limit(300));
+      _unsubLogs = onSnapshot(qLogs, snap => {
+        const rows = [];
+        snap.forEach(d => rows.push(Object.assign({ id: d.id }, d.data())));
+        cb(rows);
+      }, err => {
+        console.error('logs subscribe error:', err);
+        // แสดงสาเหตุจริงแทนการล้างจอเงียบ ๆ (มักเกิดจากยังไม่ตั้ง Firestore Rules ให้ collection "logs")
+        const el = document.getElementById('logList');
+        if (el) {
+          const perm = (err && (err.code === 'permission-denied' || /insufficient permissions/i.test(err.message || '')));
+          el.innerHTML = '<div style="text-align:center;color:#b45309;padding:30px;font-size:13px;line-height:1.7;">'
+            + '⚠️ โหลดบันทึกการใช้งานไม่สำเร็จ<br>'
+            + (perm
+                ? 'สาเหตุ: Firestore ยังไม่อนุญาตสิทธิ์อ่าน/เขียน collection <b>logs</b><br>ต้องเพิ่ม Security Rules สำหรับ <b>logs</b> ก่อน (ดูรายละเอียดที่ผู้ดูแลระบบ)'
+                : 'สาเหตุ: ' + ((err && (err.code || err.message)) || 'ไม่ทราบ'))
+            + '</div>';
+        }
+      });
+    } catch (e) {
+      console.error('fbSubscribeLogs failed:', e);
+      const el = document.getElementById('logList');
+      if (el) el.innerHTML = '<div style="text-align:center;color:#b45309;padding:30px;font-size:13px;">⚠️ เริ่มการติดตามบันทึกไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e) + '</div>';
+    }
+  };
+  window.fbUnsubscribeLogs = function() {
+    try { if (_unsubLogs) { _unsubLogs(); _unsubLogs = null; } } catch(e){}
+  };
+
+  // ลบ log ตาม id ที่เลือก (แบ่งชุดครั้งละ ≤500 ตามลิมิตของ writeBatch)
+  window.fbDeleteLogs = async function(ids) {
+    if (!Array.isArray(ids) || !ids.length) return 0;
+    let done = 0;
+    for (let i = 0; i < ids.length; i += 400) {
+      const chunk = ids.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(id => batch.delete(doc(db, 'logs', id)));
+      await batch.commit();
+      done += chunk.length;
+    }
+    return done;
+  };
+
+  // อ่าน/บันทึกจำนวนวันเก็บ log (0 = เก็บถาวร ไม่ลบอัตโนมัติ)
+  window.fbGetLogRetention = async function() {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'logRetention'));
+      if (snap.exists()) { const d = snap.data(); return Number(d.days) || 0; }
+    } catch (e) { console.error('get retention failed', e); }
+    return 0;
+  };
+  window.fbSetLogRetention = async function(days) {
+    const n = Math.max(0, Math.floor(Number(days) || 0));
+    await setDoc(doc(db, 'settings', 'logRetention'), { days: n });
+    return n;
+  };
+
+  // ลบ log ที่เก่ากว่า N วันโดยอัตโนมัติ (คืนจำนวนที่ลบ)
+  window.fbPurgeOldLogs = async function(days) {
+    const n = Math.floor(Number(days) || 0);
+    if (n <= 0) return 0;                       // 0 = ไม่ลบ
+    if (!auth.currentUser) return 0;
+    const cutoff = Date.now() - n * 86400000;
+    try {
+      const qOld = query(collection(db, 'logs'), where('tsClient', '<', cutoff), limit(400));
+      let total = 0;
+      // วนลบทีละชุดจนกว่าจะหมด (เผื่อมีเกิน 400)
+      while (true) {
+        const snap = await getDocs(qOld);
+        if (snap.empty) break;
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        total += snap.size;
+        if (snap.size < 400) break;
+      }
+      return total;
+    } catch (e) { console.error('purge old logs failed', e); return 0; }
+  };
+
   // ── Login ────────────────────────────────────────────────────
   window.doLogin = async function() {
     const email    = document.getElementById('loginEmail').value.trim();
@@ -3296,6 +3739,8 @@
     btn.textContent = 'กำลังเข้าสู่ระบบ...';
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // บันทึก log การเข้าสู่ระบบ (หน่วงเล็กน้อยรอโหลดสิทธิ์ก่อนเพื่อให้ role ถูกต้อง)
+      setTimeout(() => { window.fbLog && window.fbLog('auth.login', '', 'เข้าสู่ระบบ'); }, 1500);
     } catch(e) {
       btn.disabled = false;
       btn.textContent = 'เข้าสู่ระบบ';
@@ -3336,7 +3781,8 @@
   });
 
   // ── Logout ──────────────────────────────────────────────────
-  document.getElementById('btnLogout').addEventListener('click', () => {
+  document.getElementById('btnLogout').addEventListener('click', async () => {
+    try { if (window.fbLog) await window.fbLog('auth.logout', '', 'ออกจากระบบ'); } catch(e){}
     signOut(auth).catch(() => alert('ออกจากระบบไม่สำเร็จ'));
   });
 
@@ -3548,7 +3994,7 @@
     const usersSnap = await getDocs(collection(db, 'appUsers'));
     usersSnap.forEach(d => { out.appUsers.push(Object.assign({ _id: d.id }, d.data())); });
     // settings (เอกสารเดี่ยว)
-    for (const key of ['roles', 'perms', 'saoList', 'flowData']) {
+    for (const key of ['roles', 'perms', 'saoList', 'flowData', 'backupMeta', 'logRetention']) {
       try {
         const s = await getDoc(doc(db, 'settings', key));
         if (s.exists()) out.settings[key] = s.data();
@@ -3714,20 +4160,42 @@
       if (typeof renderSaoDropdown === 'function') renderSaoDropdown();
     });
 
-    _unsubNotes = onSnapshot(collection(db, 'notes'), snap => {
+    // โหลดโน้ตเฉพาะช่วงเดือนที่กำลังดู (เดือนก่อน–เดือนนี้–เดือนถัดไป ให้ครอบช่องปฏิทินที่ล้นขอบ)
+    // แทนการโหลดโน้ตทั้งหมดทุกวันที่เคยมี → เปิดแอปไวขึ้น + ประหยัดโควตาอ่านเมื่อข้อมูลสะสมหลายปี
+    window.fbSubscribeNotes();
+  });
+
+  // ── โหลดโน้ตแบบ "เฉพาะเดือนที่เห็น" (เรียกใหม่ทุกครั้งที่เปลี่ยนเดือน) ──
+  window.fbSubscribeNotes = function() {
+    if (!auth.currentUser) return;            // ยังไม่ล็อกอิน → ยังไม่ต้องโหลด
+    if (_unsubNotes) { _unsubNotes(); _unsubNotes = null; }
+    const _p = n => String(n).padStart(2, '0');
+    const _key = (y, m, d) => y + '-' + _p(m + 1) + '-' + _p(d);   // m = 0-indexed
+    // ครอบตั้งแต่วันแรกของเดือนก่อน ถึงวันสุดท้ายของเดือนถัดไป
+    const sD = new Date(currentYear, currentMonth - 1, 1);
+    const eD = new Date(currentYear, currentMonth + 2, 0);
+    const startKey = _key(sD.getFullYear(), sD.getMonth(), sD.getDate());
+    const endKey   = _key(eD.getFullYear(), eD.getMonth(), eD.getDate());
+    const qNotes = query(collection(db, 'notes'), orderBy(documentId()), startAt(startKey), endAt(endKey));
+    _unsubNotes = onSnapshot(qNotes, snap => {
       if (typeof notes !== 'undefined') {
-        // อย่าทับวันที่กำลังเปิดแก้ไขอยู่ (กันข้อมูลที่เพิ่งเพิ่ม/พิมพ์โดนของเก่าทับ)
+        // อย่าทับวันที่กำลังเปิดแก้ไขอยู่ (กันข้อมูลที่เพิ่งพิมพ์โดนของเก่าทับ)
         const modalOpen = document.getElementById('modalOverlay')?.classList.contains('open');
         const editKey = (modalOpen && typeof selectedDateKey !== 'undefined') ? selectedDateKey : null;
-        snap.docChanges().forEach(change => {
-          if (editKey && change.doc.id === editKey) return;
-          if (change.type === 'removed') { delete notes[change.doc.id]; }
-          else { notes[change.doc.id] = change.doc.data().list || []; }
+        const inSnap = new Set();
+        snap.forEach(d => inSnap.add(d.id));
+        // ลบเฉพาะคีย์ที่อยู่ในช่วงที่โหลด แต่ไม่มีในสแนปช็อตแล้ว (ถูกลบจากเครื่องอื่น) — เดือนอื่นในแคชไม่แตะ
+        Object.keys(notes).forEach(k => {
+          if (k >= startKey && k <= endKey && k !== editKey && !inSnap.has(k)) delete notes[k];
+        });
+        snap.forEach(d => {
+          if (editKey && d.id === editKey) return;
+          notes[d.id] = d.data().list || [];
         });
       }
       if (typeof renderCalendar === 'function') renderCalendar();
     });
-  });
+  };
 </script>
 </body>
 </html>
