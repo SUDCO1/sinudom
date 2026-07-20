@@ -591,6 +591,44 @@
       .note-more { display: none; }
     }
 
+    /* ===== BOTTOM NAV (mobile tab bar) ===== */
+    .bottom-nav { display: none; }
+    @media (max-width: 768px) {
+      .bottom-nav {
+        display: flex;
+        position: fixed; left: 0; right: 0; bottom: 0;
+        background: #ffffff;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -3px 14px rgba(0,0,0,0.08);
+        z-index: 300;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .bottom-nav-item {
+        flex: 1 1 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 3px;
+        padding: 9px 0 8px;
+        border: none; background: none; cursor: pointer;
+        color: #9ca3af; font-size: 11px; font-weight: 600;
+        font-family: inherit;
+        border-top: 2px solid transparent;
+        transition: color 0.15s, border-color 0.15s;
+      }
+      .bottom-nav-item .bn-icon { font-size: 21px; line-height: 1; }
+      .bottom-nav-item.active {
+        color: #1a3a6b;
+        border-top-color: #f5a623;
+      }
+      .bottom-nav-item:active { background: #f3f4f6; }
+      /* เว้นที่ว่างด้านล่างไม่ให้แถบเมนูบังเนื้อหา */
+      .main { padding-bottom: 88px; }
+      /* ผู้ใช้ที่มีแค่หน้าปฏิทิน → ไม่มีแถบล่าง จึงไม่ต้องเว้นที่ */
+      body.no-bottom-nav .bottom-nav { display: none; }
+      body.no-bottom-nav .main { padding-bottom: 24px; }
+      /* ซ่อนปุ่มสลับหน้าเดิมบนแถบบน — ใช้แถบล่างแทน */
+      .btn-mobile-settings { display: none !important; }
+    }
+
     /* ===== FLOW OVERLAY — MOBILE FULLSCREEN ===== */
     #flowOverlay {
       display: none !important;
@@ -709,6 +747,22 @@
     <button class="btn-logout" id="btnLogout">ออกจากระบบ</button>
   </div>
 </div>
+
+<!-- ===== BOTTOM NAV (mobile) ===== -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bottom-nav-item active" id="bnav-calendar" onclick="showView('calendar')">
+    <span class="bn-icon">📅</span><span>ปฏิทิน</span>
+  </button>
+  <button class="bottom-nav-item" id="bnav-stock" style="display:none;" onclick="showView('stock')">
+    <span class="bn-icon">📦</span><span>สต็อก</span>
+  </button>
+  <button class="bottom-nav-item" id="bnav-log" style="display:none;" onclick="showView('log')">
+    <span class="bn-icon">📜</span><span>ประวัติ</span>
+  </button>
+  <button class="bottom-nav-item" id="bnav-settings" style="display:none;" onclick="showView('settings')">
+    <span class="bn-icon">⚙️</span><span>ตั้งค่า</span>
+  </button>
+</nav>
 
 <div class="layout">
   <!-- SIDEBAR -->
@@ -1257,6 +1311,11 @@
     if (btnL) btnL.textContent = view === 'log' ? '📅' : '📜';
     const btnS = document.getElementById('btnMobileStock');
     if (btnS) btnS.textContent = view === 'stock' ? '📅' : '📦';
+    // ไฮไลต์แท็บบนแถบเมนูล่าง (มือถือ)
+    ['calendar','stock','log','settings'].forEach(function(v){
+      const b = document.getElementById('bnav-' + v);
+      if (b) b.classList.toggle('active', view === v);
+    });
     if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); renderLastBackupInfo(); if (typeof renderStockTopicsUI === 'function') renderStockTopicsUI(); }
     if (view === 'log') renderLogView();
     if (view === 'stock') renderStockView();
@@ -2158,11 +2217,14 @@
   window.canDelStock  = canDelStock;
   // ซ่อนเมนูตั้งค่าสำหรับผู้ที่ไม่มีสิทธิ์เข้า (โมดูล Firebase เรียกหลังรู้ role)
   window.applyRoleVisibility = function() {
-    const show = canAccessSettings();
+    // หน้าตั้งค่าเปิดได้เฉพาะ Admin จริง (ตรงกับด่านใน showView) → เมนูจึงโชว์เฉพาะ Admin
+    const show = isAdmin();
     const nav = document.getElementById('nav-settings');
     if (nav) nav.style.display = show ? '' : 'none';
     const mob = document.getElementById('btnMobileSettings');
     if (mob) mob.style.display = show ? '' : 'none';
+    const bSettings = document.getElementById('bnav-settings');
+    if (bSettings) bSettings.style.display = show ? '' : 'none';
     // ถ้าผู้ใช้ที่ไม่ใช่ Admin ค้างอยู่หน้าตั้งค่า ให้เด้งกลับปฏิทิน
     if (!show && _currentView === 'settings') showView('calendar');
     // เมนูบันทึกการใช้งาน (Log)
@@ -2171,6 +2233,8 @@
     if (navLog) navLog.style.display = showLog ? '' : 'none';
     const mobLog = document.getElementById('btnMobileLog');
     if (mobLog) mobLog.style.display = showLog ? '' : 'none';
+    const bLog = document.getElementById('bnav-log');
+    if (bLog) bLog.style.display = showLog ? '' : 'none';
     if (!showLog && _currentView === 'log') showView('calendar');
     // เมนูสต็อกสินค้า
     const showStock = canViewStock();
@@ -2178,7 +2242,15 @@
     if (navStock) navStock.style.display = showStock ? '' : 'none';
     const mobStock = document.getElementById('btnMobileStock');
     if (mobStock) mobStock.style.display = showStock ? '' : 'none';
+    const bStock = document.getElementById('bnav-stock');
+    if (bStock) bStock.style.display = showStock ? '' : 'none';
     if (!showStock && _currentView === 'stock') showView('calendar');
+    // ถ้าเหลือแค่แท็บปฏิทินแท็บเดียว (ผู้ใช้ไม่มีสิทธิ์อื่นเลย) → ซ่อนแถบเมนูล่างทั้งอัน
+    const visCount = ['calendar','stock','log','settings'].filter(function(v){
+      const b = document.getElementById('bnav-' + v);
+      return b && b.style.display !== 'none';
+    }).length;
+    document.body.classList.toggle('no-bottom-nav', visCount <= 1);
   };
 
   // roles: array of { name, color }
