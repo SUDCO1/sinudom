@@ -468,17 +468,21 @@
       margin-top: 2px;
     }
     .flow-node-view-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      line-height: 1;
       background: #f0fdf4; color: #15803d;
       border: 1.5px solid #86efac; border-radius: 8px;
-      padding: 7px 12px; font-size: 12px; font-weight: 700;
+      padding: 8px 12px; font-size: 12px; font-weight: 700;
       cursor: pointer; transition: background 0.15s; white-space: nowrap;
       flex: 1;
     }
     .flow-node-view-btn:hover { background: #dcfce7; }
     .flow-node-edit-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      line-height: 1;
       background: #1a3a6b; color: white;
       border: none; border-radius: 8px;
-      padding: 7px 16px; font-size: 12px; font-weight: 700;
+      padding: 8px 16px; font-size: 12px; font-weight: 700;
       cursor: pointer; transition: background 0.15s; white-space: nowrap;
       flex: 1; letter-spacing: 0.03em;
       box-shadow: 0 2px 6px rgba(26,58,107,0.25);
@@ -548,15 +552,29 @@
 
     /* ===== RESPONSIVE ===== */
     .btn-mobile-settings { display: none; }
+    html, body { max-width: 100%; overflow-x: hidden; }
     @media (max-width: 768px) {
       .sidebar { display: none; }
       .cell-notes-wrap { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 0; }
+      /* Navbar: กันล้นแนวนอน + ปุ่มออกจากระบบไม่ให้ตัด */
+      .navbar { padding: 0 10px; gap: 8px; }
+      .navbar-brand { min-width: 0; flex: 1 1 auto; gap: 8px; }
+      .navbar-icon { flex-shrink: 0; width: 34px; height: 34px; font-size: 16px; }
+      .navbar-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .navbar-subtitle { display: none; }
+      .navbar-actions { gap: 6px; flex-shrink: 0; }
+      .btn-admin { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+      .btn-logout {
+        padding: 6px 10px; font-size: 12px;
+        white-space: nowrap; flex-shrink: 0;
+      }
       .btn-mobile-settings {
         display: flex; align-items: center; justify-content: center;
         background: rgba(255,255,255,0.15); color: white;
         border: 1px solid rgba(255,255,255,0.3); border-radius: 6px;
-        padding: 7px 12px; font-size: 16px; cursor: pointer;
+        padding: 6px 10px; font-size: 16px; cursor: pointer; flex-shrink: 0;
       }
+      .month-label { min-width: 0; font-size: 16px; }
       .calendar-cell { min-height: 70px; padding: 4px; }
       .cell-day { font-size: 13px; width: 26px; height: 26px; }
       /* Mobile: dots only */
@@ -684,6 +702,7 @@
     </div>
   </div>
   <div class="navbar-actions">
+    <button class="btn-mobile-settings" id="btnMobileStock" style="display:none;" onclick="toggleMobileStock()" title="สต็อกสินค้า">📦</button>
     <button class="btn-mobile-settings" id="btnMobileLog" style="display:none;" onclick="toggleMobileLog()" title="บันทึกการใช้งาน">📜</button>
     <button class="btn-mobile-settings" id="btnMobileSettings" onclick="toggleMobileView()" title="ตั้งค่า">⚙️</button>
     <button class="btn-admin" id="navRoleBtn">Admin</button>
@@ -695,6 +714,7 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-item active" id="nav-calendar" onclick="showView('calendar')"><span class="sidebar-icon">📅</span> ปฏิทิน</div>
+    <div class="sidebar-item" id="nav-stock" style="display:none;" onclick="showView('stock')"><span class="sidebar-icon">📦</span> สต็อกสินค้า</div>
     <div class="sidebar-item" id="nav-log" style="display:none;" onclick="showView('log')"><span class="sidebar-icon">📜</span> บันทึกการใช้งาน</div>
     <div class="sidebar-item" id="nav-settings" onclick="showView('settings')"><span class="sidebar-icon">⚙️</span> ตั้งค่า</div>
   </div>
@@ -792,6 +812,23 @@
         </div>
       </div>
 
+      <!-- จัดการหัวข้อสต็อก (เฉพาะผู้มีสิทธิ์แก้ไขสต็อก) -->
+      <div id="stockTopicsCard" style="display:none;background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;margin-top:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">📦 หัวข้อสต็อก</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">เพิ่ม / แก้ชื่อ / ลบ หัวข้อใหญ่ (เช่น I18) — แล้วไปเพิ่มสเปคภายในที่หน้าสต็อก</div>
+          </div>
+        </div>
+        <div id="stockTopicsUI" style="margin-bottom:16px;min-height:40px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input id="newStockTopicInput" type="text" placeholder="ชื่อหัวข้อ เช่น I18..." maxlength="60"
+            style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;"
+            onkeydown="if(event.key==='Enter') addStockTopic()" />
+          <button onclick="addStockTopic()" style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">➕ เพิ่ม</button>
+        </div>
+      </div>
+
       <!-- สำรองข้อมูล (Backup) -->
       <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;margin-top:20px;">
         <div style="margin-bottom:16px;">
@@ -858,6 +895,76 @@
         </div>
 
         <div id="logList" style="min-height:60px;"></div>
+      </div>
+    </div>
+
+    <!-- ===== STOCK VIEW ===== -->
+    <div id="stockView" style="display:none;">
+      <div style="background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#1a3a6b;">📦 สต็อกสินค้า (Stock)</div>
+            <div id="stockSubtitle" style="font-size:12px;color:#6b7280;margin-top:2px;">เลือกหัวข้อเพื่อดู/จัดการสเปคภายใน — อัปเดตแบบเรียลไทม์</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+            <span style="font-size:12px;color:#6b7280;">Live</span>
+          </div>
+        </div>
+
+        <!-- ===== ระดับ 1: รายการหัวข้อใหญ่ ===== -->
+        <div id="stockTopicListSection">
+          <div id="stockTopicList" style="min-height:60px;margin-top:16px;"></div>
+        </div>
+
+        <!-- ===== ระดับ 2: รายการสเปคภายในหัวข้อ ===== -->
+        <div id="stockItemsSection" style="display:none;">
+          <!-- แถบนำทางกลับ + ชื่อหัวข้อ -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px;">
+            <button onclick="closeStockTopic()"
+              style="background:#eef2ff;color:#1a3a6b;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">← หัวข้อทั้งหมด</button>
+            <span style="color:#9ca3af;">/</span>
+            <span id="stockTopicTitle" style="font-size:15px;font-weight:700;color:#1a3a6b;"></span>
+          </div>
+
+          <!-- ฟอร์มเพิ่มสเปค (เฉพาะผู้มีสิทธิ์แก้ไข) -->
+          <div id="stockAddBar" style="display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:8px 0 14px;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:3;min-width:200px;">
+              <label style="font-size:11px;color:#6b7280;">สเปค / รายละเอียด</label>
+              <input id="stockSpec" type="text" placeholder="เช่น สแตนเลส 304 ยาว 2 ม."
+                style="padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px;">
+              <label style="font-size:11px;color:#6b7280;">จำนวนเริ่มต้น</label>
+              <input id="stockQty" type="number" min="0" step="1" placeholder="0"
+                style="padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;text-align:center;" />
+            </div>
+            <button onclick="addStockItem()"
+              style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ เพิ่มรายการ</button>
+          </div>
+
+          <!-- ค้นหา -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 12px;">
+            <input id="stockSearch" type="text" placeholder="🔍 ค้นหาในหัวข้อนี้..." oninput="renderStockList()"
+              style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+          </div>
+
+          <div id="stockList" style="min-height:60px;"></div>
+
+          <!-- ===== ประวัติรับเข้า–เบิกออก ภายในหัวข้อนี้ ===== -->
+          <div id="stockHistorySection" style="margin-top:24px;border-top:1px solid #eef0f4;padding-top:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+              <div style="font-size:14px;font-weight:700;color:#1a3a6b;">🧾 ประวัติรับเข้า–เบิกออก</div>
+              <select id="stockHistFilter" onchange="renderStockHistory()"
+                style="padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;font-family:inherit;outline:none;color:#374151;background:white;">
+                <option value="all">ทั้งหมด</option>
+                <option value="in">เฉพาะรับเข้า</option>
+                <option value="out">เฉพาะเบิกออก</option>
+              </select>
+            </div>
+            <div id="stockHistoryList" style="min-height:40px;"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1124,22 +1231,35 @@
       alert(currentRole() ? 'คุณไม่มีสิทธิ์ดูหน้าบันทึกการใช้งาน (ติดต่อ Admin)' : 'กำลังโหลดข้อมูลสิทธิ์ กรุณาลองใหม่อีกครั้งสักครู่');
       view = 'calendar';
     }
+    if (view === 'stock' && !canViewStock()) {
+      alert(currentRole() ? 'คุณไม่มีสิทธิ์ดูหน้าสต็อกสินค้า (ติดต่อ Admin)' : 'กำลังโหลดข้อมูลสิทธิ์ กรุณาลองใหม่อีกครั้งสักครู่');
+      view = 'calendar';
+    }
     // ยกเลิกการติดตาม log เมื่อออกจากหน้า log
     if (_currentView === 'log' && view !== 'log' && typeof window.fbUnsubscribeLogs === 'function') window.fbUnsubscribeLogs();
+    // ยกเลิกการติดตามสต็อกเมื่อออกจากหน้าสต็อก
+    if (_currentView === 'stock' && view !== 'stock' && typeof window.fbUnsubscribeStock === 'function') window.fbUnsubscribeStock();
     _currentView = view;
     document.getElementById('calendarView').style.display   = view === 'calendar' ? '' : 'none';
     document.getElementById('settingsView').style.display   = view === 'settings' ? '' : 'none';
     document.getElementById('logView').style.display        = view === 'log' ? '' : 'none';
+    const stockV = document.getElementById('stockView');
+    if (stockV) stockV.style.display = view === 'stock' ? '' : 'none';
     document.getElementById('nav-calendar').classList.toggle('active', view === 'calendar');
     document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
     const navLog = document.getElementById('nav-log');
     if (navLog) navLog.classList.toggle('active', view === 'log');
+    const navStock = document.getElementById('nav-stock');
+    if (navStock) navStock.classList.toggle('active', view === 'stock');
     const btn = document.getElementById('btnMobileSettings');
     if (btn) btn.textContent = view === 'settings' ? '📅' : '⚙️';
     const btnL = document.getElementById('btnMobileLog');
     if (btnL) btnL.textContent = view === 'log' ? '📅' : '📜';
-    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); renderLastBackupInfo(); }
+    const btnS = document.getElementById('btnMobileStock');
+    if (btnS) btnS.textContent = view === 'stock' ? '📅' : '📦';
+    if (view === 'settings') { renderRoleChips(); renderPermTable(); renderUsers(); renderSaoListUI(); renderLastBackupInfo(); if (typeof renderStockTopicsUI === 'function') renderStockTopicsUI(); }
     if (view === 'log') renderLogView();
+    if (view === 'stock') renderStockView();
   }
   function toggleMobileView() {
     showView(_currentView === 'settings' ? 'calendar' : 'settings');
@@ -1147,6 +1267,10 @@
   function toggleMobileLog() {
     showView(_currentView === 'log' ? 'calendar' : 'log');
   }
+  function toggleMobileStock() {
+    showView(_currentView === 'stock' ? 'calendar' : 'stock');
+  }
+  window.toggleMobileStock = toggleMobileStock;
 
   // ===== LOG: metadata, capture & rendering =====
   const LOG_ACTIONS = {
@@ -1169,6 +1293,14 @@
     'sao.delete':       { label:'ลบเสา',              icon:'🗑️', color:'#ef4444' },
     'log.delete':       { label:'ลบบันทึกการใช้งาน',   icon:'🗑️', color:'#ef4444' },
     'log.retention':    { label:'ตั้งค่าเก็บบันทึก',    icon:'🗓️', color:'#8b5cf6' },
+    'stock.add':        { label:'เพิ่มสินค้า',          icon:'📦', color:'#3b82f6' },
+    'stock.edit':       { label:'แก้ไขสินค้า',         icon:'✏️', color:'#f59e0b' },
+    'stock.delete':     { label:'ลบสินค้า',            icon:'🗑️', color:'#ef4444' },
+    'stock.in':         { label:'รับเข้าสต็อก',         icon:'⬆️', color:'#22c55e' },
+    'stock.out':        { label:'เบิกออกสต็อก',        icon:'⬇️', color:'#f97316' },
+    'stock.topic.add':  { label:'เพิ่มหัวข้อสต็อก',     icon:'🗂️', color:'#3b82f6' },
+    'stock.topic.edit': { label:'แก้ชื่อหัวข้อสต็อก',   icon:'✏️', color:'#f59e0b' },
+    'stock.topic.del':  { label:'ลบหัวข้อสต็อก',       icon:'🗑️', color:'#ef4444' },
   };
   function logMeta(action){ return LOG_ACTIONS[action] || { label: action, icon:'•', color:'#64748b' }; }
 
@@ -1348,12 +1480,627 @@
   window.renderLogView = renderLogView;
   window.renderLogList = renderLogList;
 
+  // ===== STOCK: สต็อกสินค้า (2 ระดับ: หัวข้อใหญ่ → สเปคภายใน) =====
+  let _stockData = [];
+  let _stockTopics = [];           // [{ id, name }] — จัดการที่หน้าตั้งค่า
+  let _stockTopicSel = null;       // id ของหัวข้อที่กำลังเปิด, null = หน้ารายการหัวข้อ, '__none__' = กลุ่มไม่ระบุหัวข้อ
+  const STOCK_NONE = '__none__';
+  function _stEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function _stockItemById(id) { return _stockData.find(it => it.id === id) || null; }
+  function _stockTopicById(id) { return _stockTopics.find(t => t.id === id) || null; }
+  function _stockTopicName(id) {
+    if (id === STOCK_NONE) return 'ไม่ระบุหัวข้อ';
+    const t = _stockTopicById(id);
+    return t ? (t.name || '(ไม่มีชื่อ)') : '(ไม่มีชื่อ)';
+  }
+  // สินค้าที่อยู่ในหัวข้อ id (STOCK_NONE = ที่ไม่มีหัวข้อ หรือหัวข้อถูกลบไปแล้ว)
+  function _stockItemsIn(id) {
+    if (id === STOCK_NONE) return _stockData.filter(it => !it.topic || !_stockTopicById(it.topic));
+    return _stockData.filter(it => it.topic === id);
+  }
+  function _hasOrphanStock() { return _stockData.some(it => !it.topic || !_stockTopicById(it.topic)); }
+
+  function renderStockView() {
+    // เริ่มติดตามข้อมูลสต็อกแบบเรียลไทม์ (ครั้งเดียว — callback จะวาดระดับที่กำลังเปิดอยู่)
+    // ประวัติเก็บใน field history ของแต่ละเอกสารสต็อก จึงมากับ callback นี้แบบเรียลไทม์อยู่แล้ว
+    if (typeof window.fbSubscribeStock === 'function') {
+      window.fbSubscribeStock(function(rows) { _stockData = rows || []; _renderStockCurrent(); });
+    }
+    _renderStockCurrent();
+  }
+
+  // ตัดสินใจว่าจะแสดง "รายการหัวข้อ" หรือ "รายการสเปคในหัวข้อ"
+  function _renderStockCurrent() {
+    // ถ้าหัวข้อที่เปิดอยู่ถูกลบไปแล้ว ให้ย้อนกลับหน้ารายการหัวข้อ
+    if (_stockTopicSel && _stockTopicSel !== STOCK_NONE && !_stockTopicById(_stockTopicSel)) _stockTopicSel = null;
+    if (_stockTopicSel === STOCK_NONE && !_hasOrphanStock()) _stockTopicSel = null;
+
+    const listSec  = document.getElementById('stockTopicListSection');
+    const itemsSec = document.getElementById('stockItemsSection');
+    const subtitle = document.getElementById('stockSubtitle');
+    if (_stockTopicSel == null) {
+      if (listSec)  listSec.style.display  = '';
+      if (itemsSec) itemsSec.style.display = 'none';
+      if (subtitle) subtitle.textContent = 'เลือกหัวข้อเพื่อดู/จัดการสเปคภายใน — อัปเดตแบบเรียลไทม์';
+      renderStockTopicList();
+    } else {
+      if (listSec)  listSec.style.display  = 'none';
+      if (itemsSec) itemsSec.style.display = '';
+      const title = document.getElementById('stockTopicTitle');
+      if (title) title.textContent = _stockTopicName(_stockTopicSel);
+      if (subtitle) subtitle.textContent = 'จัดการสเปค รับเข้า–เบิกออก ภายในหัวข้อนี้';
+      // เพิ่มรายการได้เฉพาะหัวข้อจริง + มีสิทธิ์แก้ไข (กลุ่ม "ไม่ระบุหัวข้อ" เพิ่มไม่ได้)
+      const addBar = document.getElementById('stockAddBar');
+      if (addBar) addBar.style.display = (canEditStock() && _stockTopicSel !== STOCK_NONE) ? 'flex' : 'none';
+      renderStockList();
+      renderStockHistory();
+    }
+  }
+
+  // ── ระดับ 1: การ์ดรายการหัวข้อใหญ่ ──
+  function renderStockTopicList() {
+    const el = document.getElementById('stockTopicList');
+    if (!el) return;
+    const cards = _stockTopics.slice();
+    const orphan = _hasOrphanStock();
+    if (!cards.length && !orphan) {
+      el.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:34px;font-size:13px;line-height:1.7;">'
+        + 'ยังไม่มีหัวข้อสต็อก<br>'
+        + (isAdmin() || canEditStock()
+            ? 'ไปเพิ่มหัวข้อใหญ่ได้ที่ <b>หน้าตั้งค่า → 📦 หัวข้อสต็อก</b>'
+            : 'ให้ผู้ดูแลเพิ่มหัวข้อที่หน้าตั้งค่าก่อน')
+        + '</div>';
+      return;
+    }
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
+    const mk = (id, name, badge) => {
+      const items = _stockItemsIn(id);
+      const lowN = items.filter(it => { const m = Number(it.min) || 0; return m > 0 && (Number(it.qty) || 0) <= m; }).length;
+      let c = '<div onclick="openStockTopic(\'' + _stEsc(id) + '\')" style="cursor:pointer;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;background:#f9fafb;transition:box-shadow .15s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
+      c += '<div style="display:flex;align-items:center;gap:8px;">'
+        + '<span style="font-size:20px;">' + badge + '</span>'
+        + '<span style="font-size:15px;font-weight:700;color:#1a3a6b;flex:1;word-break:break-word;">' + _stEsc(name) + '</span></div>';
+      c += '<div style="margin-top:8px;font-size:12px;color:#6b7280;">' + items.length + ' รายการ';
+      if (lowN > 0) c += ' · <span style="color:#b91c1c;font-weight:600;">⚠️ ใกล้หมด ' + lowN + '</span>';
+      c += '</div>';
+      c += '<div style="margin-top:6px;font-size:12px;color:#1a3a6b;font-weight:600;">เปิดดู →</div>';
+      c += '</div>';
+      return c;
+    };
+    cards.forEach(t => { html += mk(t.id, t.name || '(ไม่มีชื่อ)', '📦'); });
+    if (orphan) html += mk(STOCK_NONE, 'ไม่ระบุหัวข้อ', '🗃️');
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function openStockTopic(id) { _stockTopicSel = id; _renderStockCurrent(); }
+  function closeStockTopic() {
+    _stockTopicSel = null;
+    const s = document.getElementById('stockSearch');
+    if (s) s.value = '';
+    _renderStockCurrent();
+  }
+
+  // ลำดับการแสดง: ใช้ field order (ถ้าไม่มีใช้ tsClient) เพื่อให้ขยับขึ้น-ลงได้
+  function _stockOrd(it) { return Number(it.order) || Number(it.tsClient) || 0; }
+  function _stockOrderCmp(a, b) {
+    const d = _stockOrd(a) - _stockOrd(b);
+    if (d) return d;
+    return String(a.spec || a.name || '').localeCompare(String(b.spec || b.name || ''), 'th');
+  }
+
+  // เลื่อนรายการขึ้น (dir=-1) หรือลง (dir=1) ภายในหัวข้อเดียวกัน
+  async function moveStockItem(id, dir) {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    let rows = _stockItemsIn(_stockTopicSel);
+    rows.sort(_stockOrderCmp);
+    const idx = rows.findIndex(r => r.id === id);
+    const tgt = idx + dir;
+    if (idx < 0 || tgt < 0 || tgt >= rows.length) return;
+    // สลับตำแหน่งในอาเรย์ แล้วเขียน order ใหม่แบบเรียงลำดับให้ทั้งชุด (กันค่า order ซ้ำ)
+    rows.splice(tgt, 0, rows.splice(idx, 1)[0]);
+    try {
+      for (let i = 0; i < rows.length; i++) {
+        const want = (i + 1) * 1000;
+        if (_stockOrd(rows[i]) !== want && typeof window.fbUpdateStockItem === 'function') {
+          await window.fbUpdateStockItem(rows[i].id, { order: want });
+        }
+      }
+    } catch (e) {
+      alert('ย้ายลำดับไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e));
+    }
+  }
+
+  // ── ระดับ 2: ตารางสเปคภายในหัวข้อที่เลือก ──
+  function renderStockList() {
+    const el = document.getElementById('stockList');
+    if (!el) return;
+    if (_stockTopicSel == null) { el.innerHTML = ''; return; }
+    const term = (document.getElementById('stockSearch')?.value || '').trim().toLowerCase();
+    let rows = _stockItemsIn(_stockTopicSel);
+    rows.sort(_stockOrderCmp);
+    if (term) rows = rows.filter(it =>
+      String(it.spec || '').toLowerCase().includes(term)
+      || String(it.name || '').toLowerCase().includes(term));
+
+    const canAddHere = canEditStock() && _stockTopicSel !== STOCK_NONE;
+    if (!rows.length) {
+      const total = _stockItemsIn(_stockTopicSel).length;
+      el.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:34px;font-size:13px;">'
+        + (total ? 'ไม่พบรายการที่ค้นหา' : 'ยังไม่มีรายการในหัวข้อนี้' + (canAddHere ? ' — เพิ่มรายการแรกได้ที่ด้านบน' : '')) + '</div>';
+      return;
+    }
+
+    const edit = canEditStock();
+    const del = canDelStock();
+    const canMove = edit && !term && rows.length > 1;
+    let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:440px;">';
+    html += '<thead><tr style="text-align:left;color:#6b7280;">'
+      + (canMove ? '<th style="padding:8px 4px;border-bottom:2px solid #e5e7eb;width:26px;"></th>' : '')
+      + '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;">สเปค / รายละเอียด</th>'
+      + '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;text-align:center;">จำนวน</th>'
+      + '<th style="padding:8px 10px;border-bottom:2px solid #e5e7eb;text-align:right;">จัดการ</th>'
+      + '</tr></thead><tbody>';
+    rows.forEach((it, i) => {
+      const qty = Number(it.qty) || 0;
+      const min = Number(it.min) || 0;
+      const low = min > 0 && qty <= min;
+      const id = _stEsc(it.id);
+      html += '<tr class="stock-row" data-id="' + id + '"' + (canMove ? ' draggable="true"' : '') + ' style="border-bottom:1px solid #f0f0f0;">';
+      if (canMove) {
+        html += '<td class="stock-drag-handle" title="ลากเพื่อจัดลำดับ" style="padding:9px 4px;text-align:center;color:#9ca3af;cursor:grab;font-size:16px;user-select:none;">⠿</td>';
+      }
+      html += '<td style="padding:9px 10px;color:#1a3a6b;font-weight:600;">' + _stEsc(it.spec || it.name || '(ไม่มีสเปค)')
+        + (it.note ? '<div style="font-size:11px;color:#9ca3af;font-weight:400;">' + _stEsc(it.note) + '</div>' : '')
+        + (low ? '<span style="display:inline-block;margin-top:3px;background:#fee2e2;color:#b91c1c;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;">⚠️ ใกล้หมด</span>' : '')
+        + '</td>';
+      html += '<td style="padding:9px 10px;text-align:center;font-weight:700;font-size:15px;color:' + (low ? '#b91c1c' : '#111827') + ';">' + qty + '</td>';
+      html += '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">';
+      if (edit) {
+        html += '<button onclick="stockIn(\'' + id + '\')" title="รับเข้า" style="background:#dcfce7;color:#166534;border:none;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;margin-left:4px;">⬆️ รับเข้า</button>';
+        html += '<button onclick="stockOut(\'' + id + '\')" title="เบิกออก" style="background:#ffedd5;color:#9a3412;border:none;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;margin-left:4px;">⬇️ เบิกออก</button>';
+        html += '<button onclick="editStockItem(\'' + id + '\')" title="แก้ไข" style="background:#fef3c7;color:#92400e;border:none;border-radius:6px;padding:5px 9px;font-size:12px;cursor:pointer;margin-left:4px;">✏️</button>';
+      }
+      if (del) {
+        html += '<button onclick="deleteStockItem(\'' + id + '\')" title="ลบ" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:5px 9px;font-size:12px;cursor:pointer;margin-left:4px;">🗑️</button>';
+      }
+      if (!edit && !del) html += '<span style="color:#cbd5e1;font-size:12px;">—</span>';
+      html += '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+    if (canMove) _wireStockDrag(el);
+  }
+
+  // ลากรายการเพื่อจัดลำดับ (drag & drop ด้วยเมาส์)
+  function _wireStockDrag(container) {
+    const trs = Array.from(container.querySelectorAll('tr.stock-row[data-id]'));
+    let dragId = null;
+    const clearMarks = () => trs.forEach(r => { r.style.boxShadow = ''; r.style.opacity = ''; });
+    trs.forEach(tr => {
+      tr.addEventListener('dragstart', e => {
+        dragId = tr.getAttribute('data-id');
+        tr.style.opacity = '0.4';
+        if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragId); } catch (_) {} }
+      });
+      tr.addEventListener('dragend', () => { dragId = null; clearMarks(); });
+      tr.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        const tid = tr.getAttribute('data-id');
+        if (dragId && tid !== dragId) {
+          const rect = tr.getBoundingClientRect();
+          const below = e.clientY > rect.top + rect.height / 2;
+          tr.style.boxShadow = below ? 'inset 0 -2px 0 0 #1a3a6b' : 'inset 0 2px 0 0 #1a3a6b';
+        }
+      });
+      tr.addEventListener('dragleave', () => { tr.style.boxShadow = ''; });
+      tr.addEventListener('drop', e => {
+        e.preventDefault();
+        const tid = tr.getAttribute('data-id');
+        clearMarks();
+        if (dragId && tid && dragId !== tid) {
+          const rect = tr.getBoundingClientRect();
+          const below = e.clientY > rect.top + rect.height / 2;
+          _reorderStockDrop(dragId, tid, below);
+        }
+        dragId = null;
+      });
+    });
+  }
+
+  // จัดลำดับใหม่หลังลากวาง: ย้าย dragId ไปไว้ก่อน/หลัง targetId แล้วบันทึก order ทั้งชุด
+  async function _reorderStockDrop(dragId, targetId, after) {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    let rows = _stockItemsIn(_stockTopicSel);
+    rows.sort(_stockOrderCmp);
+    const from = rows.findIndex(r => r.id === dragId);
+    if (from < 0) return;
+    const moved = rows.splice(from, 1)[0];
+    let to = rows.findIndex(r => r.id === targetId);
+    if (to < 0) return;
+    if (after) to += 1;
+    rows.splice(to, 0, moved);
+    try {
+      for (let i = 0; i < rows.length; i++) {
+        const want = (i + 1) * 1000;
+        if (_stockOrd(rows[i]) !== want && typeof window.fbUpdateStockItem === 'function') {
+          await window.fbUpdateStockItem(rows[i].id, { order: want });
+        }
+      }
+    } catch (e) {
+      alert('ย้ายลำดับไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e));
+    }
+  }
+
+  async function addStockItem() {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    if (!_stockTopicSel || _stockTopicSel === STOCK_NONE) { alert('กรุณาเลือกหัวข้อก่อนเพิ่มรายการ'); return; }
+    const specEl = document.getElementById('stockSpec');
+    const qtyEl  = document.getElementById('stockQty');
+    const spec = (specEl?.value || '').trim();
+    if (!spec) { alert('กรุณากรอกสเปค / รายละเอียด'); specEl?.focus(); return; }
+    const item = {
+      name: spec,
+      spec,
+      unit: '',
+      qty: Math.max(0, Math.floor(Number(qtyEl?.value) || 0)),
+      min: 0,
+      note: '',
+      topic: _stockTopicSel
+    };
+    try {
+      if (typeof window.fbAddStockItem === 'function') await window.fbAddStockItem(item);
+      logAction('stock.add', spec, 'เพิ่มรายการ: ' + spec + ' [' + _stockTopicName(_stockTopicSel) + '] (เริ่มต้น ' + item.qty + ')');
+      if (specEl) specEl.value = '';
+      if (qtyEl)  qtyEl.value = '';
+      specEl?.focus();
+    } catch (e) {
+      alert('เพิ่มรายการไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e) + '\n(อาจต้องปรับ Firestore Rules ให้เขียน collection "stock" ได้)');
+    }
+  }
+
+  async function editStockItem(id) {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    const it = _stockItemById(id);
+    if (!it) return;
+    const spec = prompt('สเปค / รายละเอียด:', it.spec || it.name || '');
+    if (spec === null) return;
+    if (!spec.trim()) { alert('สเปคห้ามว่าง'); return; }
+    const qtyStr = prompt('จำนวนคงเหลือ:', String(Number(it.qty) || 0));
+    if (qtyStr === null) return;
+    const patch = {
+      name: spec.trim(),
+      spec: spec.trim(),
+      qty: Math.max(0, Math.floor(Number(qtyStr) || 0))
+    };
+    try {
+      if (typeof window.fbUpdateStockItem === 'function') await window.fbUpdateStockItem(id, patch);
+      logAction('stock.edit', patch.spec, 'แก้ไขรายการ: ' + patch.spec + ' (คงเหลือ ' + patch.qty + ')');
+    } catch (e) {
+      alert('แก้ไขไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e));
+    }
+  }
+
+  // รับเข้า / เบิกออก → เปิดโมดัลให้กรอกจำนวน + วันที่-เวลา + หมายเหตุ
+  function stockIn(id)  { showStockMoveDialog(id, 'in'); }
+  function stockOut(id) { showStockMoveDialog(id, 'out'); }
+
+  // ── ตัวช่วยเรื่องวันที่-เวลา ──
+  // ค่าเริ่มต้นของ <input type="datetime-local"> (เวลาท้องถิ่น)
+  function _dtLocalInputValue(ms) {
+    const d = new Date(ms); const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+      + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  // ค่าเริ่มต้นของ <input type="date"> (เฉพาะวันที่ ท้องถิ่น)
+  function _dateInputValue(ms) {
+    const d = new Date(ms); const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  // ค่าเริ่มต้นของ <input type="time"> (HH:MM ท้องถิ่น)
+  function _timeInputValue(ms) {
+    const d = new Date(ms); const p = n => String(n).padStart(2, '0');
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  // แสดงเวลาแบบไทยอ่านง่าย
+  function _fmtMoveTime(ms) {
+    try {
+      return new Date(ms).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return new Date(ms).toLocaleString(); }
+  }
+
+  // โมดัลรับเข้า/เบิกออก (type = 'in' | 'out')
+  function showStockMoveDialog(id, type) {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    const it = _stockItemById(id);
+    if (!it) return;
+    const isIn = type !== 'out';
+    const cur  = Number(it.qty) || 0;
+
+    const old = document.getElementById('stockMoveDialog');
+    if (old) old.remove();
+
+    const accent     = isIn ? '#16a34a' : '#ea580c';
+    const accentBg   = isIn ? '#dcfce7' : '#ffedd5';
+    const accentText = isIn ? '#166534' : '#9a3412';
+    const title = isIn ? 'รับเข้า' : 'เบิกออก';
+    const icon  = isIn ? '⬆️' : '⬇️';
+
+    // ช่อง "เลขที่ใบสั่งขาย (SO)" — เฉพาะตอนเบิกออก
+    const soFieldHtml = isIn ? '' : (''
+      + '<div style="display:flex;flex-direction:column;gap:4px;">'
+      +   '<label style="font-size:12px;color:#6b7280;font-weight:600;">เลขที่ใบสั่งขาย (SO)</label>'
+      +   '<input id="smSO" type="text" placeholder="เช่น SO-2026-0001" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />'
+      + '</div>');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'stockMoveDialog';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:1400;animation:fadeIn 0.15s ease;';
+    overlay.innerHTML = ''
+      + '<div style="background:white;border-radius:14px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;animation:popIn 0.15s ease;">'
+      +   '<div style="background:' + accentBg + ';padding:16px 20px;display:flex;align-items:center;gap:10px;">'
+      +     '<span style="font-size:22px;">' + icon + '</span>'
+      +     '<div>'
+      +       '<div style="font-size:15px;font-weight:700;color:' + accentText + ';word-break:break-word;">' + title + ' · ' + _stEsc(it.name || '') + '</div>'
+      +       '<div style="font-size:12px;color:' + accentText + ';opacity:.85;margin-top:2px;">คงเหลือปัจจุบัน ' + cur + (it.unit ? (' ' + _stEsc(it.unit)) : '') + '</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">'
+      +     '<div style="display:flex;flex-direction:column;gap:4px;">'
+      +       '<label style="font-size:12px;color:#6b7280;font-weight:600;">จำนวน' + (isIn ? 'ที่รับเข้า' : 'ที่เบิกออก') + '</label>'
+      +       '<input id="smAmount" type="number" min="1" step="1" placeholder="0" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;text-align:center;" />'
+      +     '</div>'
+      +     soFieldHtml
+      +     '<div style="display:flex;gap:10px;">'
+      +       '<div style="display:flex;flex-direction:column;gap:4px;flex:1.4;">'
+      +         '<label style="font-size:12px;color:#6b7280;font-weight:600;">วันที่</label>'
+      +         '<input id="smDate" type="date" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;" />'
+      +       '</div>'
+      +       '<div style="display:flex;flex-direction:column;gap:4px;flex:1;">'
+      +         '<label style="font-size:12px;color:#6b7280;font-weight:600;">เวลา</label>'
+      +         '<input id="smTime" type="time" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;" />'
+      +       '</div>'
+      +     '</div>'
+      +     '<div style="display:flex;flex-direction:column;gap:4px;">'
+      +       '<label style="font-size:12px;color:#6b7280;font-weight:600;">หมายเหตุ (ถ้ามี)</label>'
+      +       '<input id="smNote" type="text" placeholder="เช่น ผู้ส่ง / เลขที่บิล / งานที่นำไปใช้" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="padding:0 20px 18px;display:flex;gap:8px;justify-content:flex-end;">'
+      +     '<button id="smCancel" style="background:white;border:1px solid #d1d5db;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer;color:#374151;font-family:inherit;">ยกเลิก</button>'
+      +     '<button id="smOk" style="background:' + accent + ';color:white;border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">' + icon + ' บันทึก' + title + '</button>'
+      +   '</div>'
+      + '</div>'
+      + '<style>@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{transform:scale(0.9)}to{transform:scale(1)}}</style>';
+    document.body.appendChild(overlay);
+
+    const dateEl   = document.getElementById('smDate');
+    const timeEl   = document.getElementById('smTime');
+    const amtEl    = document.getElementById('smAmount');
+    const noteEl   = document.getElementById('smNote');
+    const soEl     = document.getElementById('smSO');
+    if (amtEl) amtEl.focus();
+
+    // แสดงวันที่+เวลาเลย (ตั้งเป็นตอนนี้) และล็อกวันให้เลือกได้เฉพาะภายในเดือน/ปีปัจจุบัน
+    {
+      const now = Date.now();
+      if (dateEl) {
+        const nd = new Date(now);
+        dateEl.min = _dateInputValue(new Date(nd.getFullYear(), nd.getMonth(), 1).getTime());
+        dateEl.max = _dateInputValue(now);
+        dateEl.value = _dateInputValue(now);
+      }
+      if (timeEl) timeEl.value = _timeInputValue(now);
+    }
+
+    const close = () => overlay.remove();
+    document.getElementById('smCancel').onclick = close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    const submit = async () => {
+      const amt = Math.floor(Number(amtEl.value) || 0);
+      if (!(amt > 0)) { alert('กรุณากรอกจำนวนที่มากกว่า 0'); amtEl.focus(); return; }
+      if (!isIn && amt > cur) { alert('เบิกออกได้ไม่เกินจำนวนคงเหลือ (' + cur + ')'); amtEl.focus(); return; }
+      // รวมวันที่ + เวลาที่ผู้ใช้กรอก (ค่าเริ่มต้น = ตอนนี้)
+      let at = Date.now();
+      if (dateEl && dateEl.value) {
+        const timeStr = (timeEl && timeEl.value) ? timeEl.value : _timeInputValue(Date.now());
+        const d = new Date(dateEl.value + 'T' + timeStr + ':00');
+        if (!isNaN(d.getTime())) at = d.getTime();
+      }
+      const note = (noteEl.value || '').trim();
+      const so   = (soEl && soEl.value || '').trim();
+      const next = isIn ? (cur + amt) : (cur - amt);
+      close();
+      try {
+        const entry = { t: isIn ? 'in' : 'out', a: amt, bal: next, at: at, note: note, so: so };
+        if (typeof window.fbApplyStockMove === 'function') {
+          await window.fbApplyStockMove(id, next, entry, it.history);   // เก็บประวัติในเอกสารสต็อกเดิม
+        } else if (typeof window.fbSetStockQty === 'function') {
+          await window.fbSetStockQty(id, next);
+        }
+        logAction(isIn ? 'stock.in' : 'stock.out', it.name || '',
+          (isIn ? 'รับเข้า ' : 'เบิกออก ') + amt + ' ' + (it.unit || '') + ' (คงเหลือ ' + next + ')'
+          + (so ? ' · SO ' + so : '') + (note ? ' · ' + note : '') + ' · ' + _fmtMoveTime(at));
+      } catch (e) {
+        alert('บันทึก' + title + 'ไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e));
+      }
+    };
+    document.getElementById('smOk').onclick = submit;
+    [amtEl, noteEl, soEl].forEach(el => el && el.addEventListener('keydown', ev => { if (ev.key === 'Enter') submit(); }));
+  }
+
+  // ── ประวัติรับเข้า–เบิกออก (แสดงใต้รายการของหัวข้อที่เปิดอยู่) ──
+  function renderStockHistory() {
+    const el = document.getElementById('stockHistoryList');
+    if (!el) return;
+    if (_stockTopicSel == null) return;      // แสดงเฉพาะตอนเปิดหัวข้อ
+    const topicItems = _stockItemsIn(_stockTopicSel);
+    const filt = (document.getElementById('stockHistFilter') || {}).value || 'all';
+    // รวมประวัติจากทุกสเปคในหัวข้อ (เก็บใน field history ของแต่ละเอกสารสต็อก)
+    let rows = [];
+    topicItems.forEach(it => {
+      (Array.isArray(it.history) ? it.history : []).forEach(h => {
+        rows.push({
+          itemName: it.name || '',
+          unit: it.unit || '',
+          type: h.t || 'in',
+          amount: Number(h.a) || 0,
+          balanceAfter: Number(h.bal) || 0,
+          at: Number(h.at) || 0,
+          note: h.note || '',
+          so: h.so || '',
+          email: h.by || ''
+        });
+      });
+    });
+    if (filt === 'in' || filt === 'out') rows = rows.filter(m => (m.type || 'in') === filt);
+    rows.sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
+
+    if (!rows.length) {
+      el.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:22px;font-size:12.5px;">ยังไม่มีประวัติรับเข้า–เบิกออกในหัวข้อนี้</div>';
+      return;
+    }
+    const MAX = 150;
+    const shown = rows.slice(0, MAX);
+    let h = '<div style="display:flex;flex-direction:column;gap:6px;">';
+    shown.forEach(m => {
+      const isIn = (m.type || 'in') === 'in';
+      const col = isIn ? '#16a34a' : '#ea580c';
+      const bg  = isIn ? '#f0fdf4' : '#fff7ed';
+      const lbl = isIn ? 'รับเข้า' : 'เบิกออก';
+      const sign = isIn ? '+' : '−';
+      const when = _fmtMoveTime(Number(m.at) || Number(m.tsClient) || 0);
+      h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid #eef0f4;border-left:3px solid ' + col + ';border-radius:8px;padding:8px 12px;background:' + bg + ';">';
+      h += '<span style="font-size:11.5px;font-weight:700;color:#1e40af;background:#eaf1ff;border:1px solid #bfd3ff;border-radius:6px;padding:3px 9px;min-width:128px;white-space:nowrap;">🕒 ' + _stEsc(when) + '</span>';
+      h += '<span style="font-size:12.5px;font-weight:600;color:#1a3a6b;flex:1;min-width:110px;word-break:break-word;">' + _stEsc(m.itemName || '') + '</span>';
+      h += '<span style="font-size:11px;font-weight:700;color:' + col + ';background:white;border:1px solid ' + col + ';border-radius:20px;padding:2px 9px;white-space:nowrap;">' + lbl + ' ' + sign + (Number(m.amount) || 0) + (m.unit ? (' ' + _stEsc(m.unit)) : '') + '</span>';
+      h += '<span style="font-size:11.5px;color:#374151;min-width:76px;">คงเหลือ ' + (Number(m.balanceAfter) || 0) + '</span>';
+      if (m.so)    h += '<span style="font-size:11px;font-weight:600;color:#9a3412;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:2px 8px;">🧾 SO ' + _stEsc(m.so) + '</span>';
+      if (m.note)  h += '<span style="font-size:11.5px;color:#6b7280;flex-basis:100%;">📝 ' + _stEsc(m.note) + '</span>';
+      if (m.email) h += '<span style="font-size:11px;color:#9ca3af;flex-basis:100%;">โดย ' + _stEsc(m.email) + '</span>';
+      h += '</div>';
+    });
+    h += '</div>';
+    if (rows.length > MAX) h += '<div style="text-align:center;color:#9ca3af;font-size:11.5px;padding:8px;">แสดง ' + MAX + ' รายการล่าสุด จากทั้งหมด ' + rows.length + '</div>';
+    el.innerHTML = h;
+  }
+
+  async function deleteStockItem(id) {
+    if (!canDelStock()) { alert(denyMsg()); return; }
+    const it = _stockItemById(id);
+    if (!it) return;
+    if (!confirm('ลบสินค้า "' + (it.name || '') + '" ?\n(ลบแล้วกู้คืนไม่ได้)')) return;
+    try {
+      if (typeof window.fbDeleteStockItem === 'function') await window.fbDeleteStockItem(id);
+      logAction('stock.delete', it.name || '', 'ลบสินค้า: ' + (it.name || ''));
+    } catch (e) {
+      alert('ลบไม่สำเร็จ: ' + ((e && (e.code || e.message)) || e));
+    }
+  }
+
+  // ── SETTINGS: จัดการหัวข้อสต็อก (เพิ่ม/แก้ชื่อ/ลบ) ──
+  function _genTopicId() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function saveStockTopics(list) {
+    _stockTopics = list;
+    if (typeof window.fbSaveStockTopics === 'function') window.fbSaveStockTopics(list);
+  }
+  function renderStockTopicsUI() {
+    const card = document.getElementById('stockTopicsCard');
+    const container = document.getElementById('stockTopicsUI');
+    // แสดงการ์ดเฉพาะคนที่มีสิทธิ์แก้ไขสต็อก
+    const mayManage = canEditStock() || isAdmin();
+    if (card) card.style.display = mayManage ? '' : 'none';
+    if (!container || !mayManage) return;
+    if (!_stockTopics.length) {
+      container.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px 0;">ยังไม่มีหัวข้อ — เพิ่มหัวข้อแรกด้านล่าง</div>';
+      return;
+    }
+    const del = canDelStock() || isAdmin();
+    container.innerHTML = '';
+    _stockTopics.forEach(t => {
+      const cnt = _stockItemsIn(t.id).length;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;background:#f9fafb;';
+      row.innerHTML = '<span style="font-size:16px;">📦</span>'
+        + '<span style="flex:1;font-size:13px;font-weight:600;color:#1a3a6b;word-break:break-word;">' + _stEsc(t.name || '(ไม่มีชื่อ)') + '</span>'
+        + '<span style="font-size:11px;color:#9ca3af;">' + cnt + ' รายการ</span>'
+        + '<button onclick="renameStockTopic(\'' + _stEsc(t.id) + '\')" title="แก้ชื่อ" style="background:none;border:none;color:#f59e0b;cursor:pointer;font-size:14px;padding:2px 6px;">✏️</button>'
+        + (del ? '<button onclick="deleteStockTopic(\'' + _stEsc(t.id) + '\')" title="ลบ" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>' : '');
+      container.appendChild(row);
+    });
+  }
+  function addStockTopic() {
+    if (!(canEditStock() || isAdmin())) { alert(denyMsg()); return; }
+    const inp = document.getElementById('newStockTopicInput');
+    const name = inp ? inp.value.trim() : '';
+    if (!name) return;
+    if (_stockTopics.some(t => (t.name || '').toLowerCase() === name.toLowerCase())) { alert('มีหัวข้อชื่อนี้อยู่แล้ว'); return; }
+    const list = _stockTopics.slice();
+    list.push({ id: _genTopicId(), name });
+    saveStockTopics(list);
+    logAction('stock.topic.add', name, 'เพิ่มหัวข้อสต็อก: ' + name);
+    if (inp) inp.value = '';
+    renderStockTopicsUI();
+  }
+  function renameStockTopic(id) {
+    if (!(canEditStock() || isAdmin())) { alert(denyMsg()); return; }
+    const t = _stockTopicById(id);
+    if (!t) return;
+    const name = prompt('ชื่อหัวข้อ:', t.name || '');
+    if (name === null) return;
+    const nm = name.trim();
+    if (!nm) { alert('ชื่อหัวข้อห้ามว่าง'); return; }
+    if (_stockTopics.some(x => x.id !== id && (x.name || '').toLowerCase() === nm.toLowerCase())) { alert('มีหัวข้อชื่อนี้อยู่แล้ว'); return; }
+    const list = _stockTopics.map(x => x.id === id ? { ...x, name: nm } : x);
+    saveStockTopics(list);
+    logAction('stock.topic.edit', nm, 'แก้ชื่อหัวข้อสต็อก: ' + (t.name || '') + ' → ' + nm);
+    renderStockTopicsUI();
+  }
+  function deleteStockTopic(id) {
+    if (!(canDelStock() || isAdmin())) { alert(denyMsg()); return; }
+    const t = _stockTopicById(id);
+    if (!t) return;
+    const cnt = _stockItemsIn(id).length;
+    if (cnt > 0) { alert('หัวข้อนี้ยังมี ' + cnt + ' รายการ\nกรุณาลบ/ย้ายรายการในหัวข้อออกก่อน แล้วจึงลบหัวข้อ'); return; }
+    if (!confirm('ลบหัวข้อ "' + (t.name || '') + '" ?')) return;
+    const list = _stockTopics.filter(x => x.id !== id);
+    saveStockTopics(list);
+    logAction('stock.topic.del', t.name || '', 'ลบหัวข้อสต็อก: ' + (t.name || ''));
+    renderStockTopicsUI();
+  }
+
+  window.renderStockView = renderStockView;
+  window.renderStockList = renderStockList;
+  window.renderStockTopicList = renderStockTopicList;
+  window._renderStockCurrent = _renderStockCurrent;
+  window.openStockTopic = openStockTopic;
+  window.closeStockTopic = closeStockTopic;
+  window.addStockItem = addStockItem;
+  window.editStockItem = editStockItem;
+  window.stockIn = stockIn;
+  window.stockOut = stockOut;
+  window.showStockMoveDialog = showStockMoveDialog;
+  window.renderStockHistory = renderStockHistory;
+  window.moveStockItem = moveStockItem;
+  window.deleteStockItem = deleteStockItem;
+  window.renderStockTopicsUI = renderStockTopicsUI;
+  window.addStockTopic = addStockTopic;
+  window.renameStockTopic = renameStockTopic;
+  window.deleteStockTopic = deleteStockTopic;
+  window._setStockTopics = function(list) { _stockTopics = Array.isArray(list) ? list : []; };
+
   // ===== SETTINGS: PERMISSIONS =====
   // ส่วนงานจริงในแอป (ของเดิมเป็นชื่อแผนกสมมติที่ไม่ตรงกับหน้าจอจริง จึงบังคับสิทธิ์ไม่ได้)
   const SETTINGS_LABEL = 'ตั้งค่า (Settings)';
   const LOG_LABEL = 'บันทึกการใช้งาน (Log)';
+  const STOCK_LABEL = 'สต็อกสินค้า (Stock)';
   const PAGES = [
     { icon:'📅', label:'ปฏิทิน/โน้ต' },
+    { icon:'📦', label: STOCK_LABEL },
     { icon:'🔀', label:'ผังงาน (Flowchart)' },
     { icon:'📜', label: LOG_LABEL, accessOnly:true },
     { icon:'⚙️', label: SETTINGS_LABEL, accessOnly:true },
@@ -1402,6 +2149,13 @@
     return !!(p && p.del);
   }
   window.canDeleteLog = canDeleteLog;
+  // ใครเห็น/ใช้หน้าสต็อกได้: Admin เสมอ + ตำแหน่งที่มีสิทธิ์ "ดู" หน้าสต็อก
+  function canViewStock() { return can(STOCK_LABEL, 'read'); }
+  function canEditStock() { return can(STOCK_LABEL, 'write'); }
+  function canDelStock()  { return can(STOCK_LABEL, 'del'); }
+  window.canViewStock = canViewStock;
+  window.canEditStock = canEditStock;
+  window.canDelStock  = canDelStock;
   // ซ่อนเมนูตั้งค่าสำหรับผู้ที่ไม่มีสิทธิ์เข้า (โมดูล Firebase เรียกหลังรู้ role)
   window.applyRoleVisibility = function() {
     const show = canAccessSettings();
@@ -1418,6 +2172,13 @@
     const mobLog = document.getElementById('btnMobileLog');
     if (mobLog) mobLog.style.display = showLog ? '' : 'none';
     if (!showLog && _currentView === 'log') showView('calendar');
+    // เมนูสต็อกสินค้า
+    const showStock = canViewStock();
+    const navStock = document.getElementById('nav-stock');
+    if (navStock) navStock.style.display = showStock ? '' : 'none';
+    const mobStock = document.getElementById('btnMobileStock');
+    if (mobStock) mobStock.style.display = showStock ? '' : 'none';
+    if (!showStock && _currentView === 'stock') showView('calendar');
   };
 
   // roles: array of { name, color }
@@ -2762,7 +3523,10 @@
     'Slump': {
       showMemo: false,
       rows: [
-        [{ id: 'tpl_slump', label: '📏 ค่า Slump', type: 'number', placeholder: '0', unit: 'cm' }],
+        [
+          { id: 'tpl_slump', label: '📏 ค่า Slump', type: 'number', placeholder: '0', unit: 'cm', flex: 2 },
+          { id: 'tpl_slump_time', label: '🕐 เวลา', type: 'time', placeholder: '', unit: '', flex: 1 },
+        ],
       ],
     },
     'ลูกปูน': {
@@ -3974,6 +4738,105 @@
     _openFlowEverExisted = false;
   };
 
+  // ── STOCK: สต็อกสินค้า (collection "stock") ─────────────────
+  let _unsubStock = null;
+  window.fbSubscribeStock = function(cb) {
+    try { if (_unsubStock) { _unsubStock(); _unsubStock = null; } } catch (e) {}
+    if (!auth.currentUser) return;
+    try {
+      const qStock = query(collection(db, 'stock'), orderBy('name'));
+      _unsubStock = onSnapshot(qStock, snap => {
+        const rows = [];
+        snap.forEach(d => rows.push(Object.assign({ id: d.id }, d.data())));
+        cb(rows);
+      }, err => {
+        console.error('stock subscribe error:', err);
+        const el = document.getElementById('stockList');
+        if (el) {
+          const perm = (err && (err.code === 'permission-denied' || /insufficient permissions/i.test(err.message || '')));
+          el.innerHTML = '<div style="text-align:center;color:#b45309;padding:30px;font-size:13px;line-height:1.7;">'
+            + '⚠️ โหลดสต็อกสินค้าไม่สำเร็จ<br>'
+            + (perm
+                ? 'สาเหตุ: Firestore ยังไม่อนุญาตสิทธิ์อ่าน/เขียน collection <b>stock</b><br>ต้องเพิ่ม Security Rules สำหรับ <b>stock</b> ก่อน'
+                : 'สาเหตุ: ' + ((err && (err.code || err.message)) || 'ไม่ทราบ'))
+            + '</div>';
+        }
+      });
+    } catch (e) {
+      console.error('fbSubscribeStock failed:', e);
+    }
+  };
+  window.fbUnsubscribeStock = function() {
+    try { if (_unsubStock) { _unsubStock(); _unsubStock = null; } } catch (e) {}
+  };
+  window.fbAddStockItem = async function(item) {
+    return await addDoc(collection(db, 'stock'), {
+      name: item.name || '',
+      spec: item.spec || '',
+      unit: item.unit || '',
+      qty: Math.max(0, Math.floor(Number(item.qty) || 0)),
+      min: Math.max(0, Math.floor(Number(item.min) || 0)),
+      note: item.note || '',
+      topic: item.topic || '',
+      order: Number(item.order) || Date.now(),
+      createdAt: serverTimestamp(),
+      tsClient: Date.now(),
+      updatedAt: Date.now()
+    });
+  };
+  window.fbUpdateStockItem = async function(id, patch) {
+    const body = { updatedAt: Date.now() };
+    if ('name'  in patch) body.name  = patch.name || '';
+    if ('spec'  in patch) body.spec  = patch.spec || '';
+    if ('unit'  in patch) body.unit  = patch.unit || '';
+    if ('note'  in patch) body.note  = patch.note || '';
+    if ('topic' in patch) body.topic = patch.topic || '';
+    if ('min'   in patch) body.min   = Math.max(0, Math.floor(Number(patch.min) || 0));
+    if ('qty'   in patch) body.qty   = Math.max(0, Math.floor(Number(patch.qty) || 0));
+    if ('order' in patch) body.order = Number(patch.order) || 0;
+    return await updateDoc(doc(db, 'stock', id), body);
+  };
+  window.fbSetStockQty = async function(id, qty) {
+    return await updateDoc(doc(db, 'stock', id), {
+      qty: Math.max(0, Math.floor(Number(qty) || 0)),
+      updatedAt: Date.now()
+    });
+  };
+  window.fbDeleteStockItem = async function(id) {
+    return await deleteDoc(doc(db, 'stock', id));
+  };
+
+  // ── STOCK MOVE: บันทึกรับเข้า/เบิกออก + ต่อประวัติในเอกสารสต็อกเดิม ──
+  // เก็บประวัติไว้ใน field "history" ของเอกสาร collection "stock" (ใช้สิทธิ์เดิม ไม่ต้องตั้ง Rules ใหม่)
+  window.fbApplyStockMove = async function(id, nextQty, entry, prevHistory) {
+    const hist = Array.isArray(prevHistory) ? prevHistory.slice() : [];
+    hist.push({
+      t: (entry && entry.t === 'out') ? 'out' : 'in',
+      a: Math.max(0, Math.floor(Number(entry && entry.a) || 0)),
+      bal: Math.max(0, Math.floor(Number(entry && entry.bal) || 0)),
+      at: Number(entry && entry.at) || Date.now(),
+      note: (entry && entry.note) || '',
+      so: (entry && entry.so) || '',                 // เลขที่ใบสั่งขาย (เฉพาะเบิกออก)
+      by: (auth.currentUser && auth.currentUser.email) || ''
+    });
+    // เก็บล่าสุดไม่เกิน 300 รายการต่อสเปค (กันเอกสารใหญ่เกินลิมิต Firestore)
+    const trimmed = hist.length > 300 ? hist.slice(hist.length - 300) : hist;
+    return await updateDoc(doc(db, 'stock', id), {
+      qty: Math.max(0, Math.floor(Number(nextQty) || 0)),
+      history: trimmed,
+      updatedAt: Date.now()
+    });
+  };
+
+  // ── STOCK TOPICS: หัวข้อใหญ่ (เก็บใน settings/stockTopics) ──
+  window.fbSaveStockTopics = async function(list) {
+    try {
+      await setDoc(doc(db, 'settings', 'stockTopics'), { list: Array.isArray(list) ? list : [] });
+    } catch (e) {
+      alert('บันทึกหัวข้อสต็อกไม่สำเร็จ (อาจไม่มีสิทธิ์): ' + (e?.message || e));
+    }
+  };
+
   // ===== BACKUP: ดึงข้อมูลทั้งหมดจาก Firestore =====
   window.fbExportAll = async function() {
     const out = {
@@ -3981,12 +4844,18 @@
       version: 1,
       flows: {},
       notes: {},
+      stock: [],
       appUsers: [],
       settings: {}
     };
     // flows (เอกสารละ 1 ผัง เก็บเป็น string ใน field data)
     const flowsSnap = await getDocs(collection(db, 'flows'));
     flowsSnap.forEach(d => { out.flows[d.id] = d.data(); });
+    // stock (เอกสารละ 1 สินค้า — เก็บ id ไว้เพื่อกู้คืนตำแหน่งเดิม)
+    try {
+      const stockSnap = await getDocs(collection(db, 'stock'));
+      stockSnap.forEach(d => { out.stock.push(Object.assign({ _id: d.id }, d.data())); });
+    } catch (e) { /* ข้ามถ้ายังไม่มี collection stock */ }
     // notes (เอกสารละ 1 วัน)
     const notesSnap = await getDocs(collection(db, 'notes'));
     notesSnap.forEach(d => { out.notes[d.id] = d.data(); });
@@ -3994,7 +4863,7 @@
     const usersSnap = await getDocs(collection(db, 'appUsers'));
     usersSnap.forEach(d => { out.appUsers.push(Object.assign({ _id: d.id }, d.data())); });
     // settings (เอกสารเดี่ยว)
-    for (const key of ['roles', 'perms', 'saoList', 'flowData', 'backupMeta', 'logRetention']) {
+    for (const key of ['roles', 'perms', 'saoList', 'flowData', 'backupMeta', 'logRetention', 'stockTopics']) {
       try {
         const s = await getDoc(doc(db, 'settings', key));
         if (s.exists()) out.settings[key] = s.data();
@@ -4015,6 +4884,15 @@
     if (data.notes) {
       for (const k of Object.keys(data.notes)) {
         tasks.push(setDoc(doc(db, 'notes', k), data.notes[k]));
+      }
+    }
+    if (Array.isArray(data.stock)) {
+      for (const s of data.stock) {
+        const id = s._id;
+        const body = Object.assign({}, s);
+        delete body._id;
+        if (id) tasks.push(setDoc(doc(db, 'stock', id), body));
+        else tasks.push(addDoc(collection(db, 'stock'), body));
       }
     }
     if (Array.isArray(data.appUsers)) {
@@ -4075,13 +4953,14 @@
     } catch(e) { console.error('ย้ายข้อมูลผังเก่าไม่สำเร็จ:', e); }
   }
 
-  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao, _unsubFlow, _unsubPerms, _unsubBackupMeta;
+  let _unsubNotes, _unsubUsers, _unsubRoles, _unsubSao, _unsubFlow, _unsubPerms, _unsubBackupMeta, _unsubStockTopics;
 
   onAuthStateChanged(auth, user => {
     if (_unsubNotes)  { _unsubNotes();  _unsubNotes  = null; }
     if (_unsubUsers)  { _unsubUsers();  _unsubUsers  = null; }
     if (_unsubRoles)  { _unsubRoles();  _unsubRoles  = null; }
     if (_unsubSao)    { _unsubSao();    _unsubSao    = null; }
+    if (_unsubStockTopics) { _unsubStockTopics(); _unsubStockTopics = null; }
     if (_unsubFlow)   { _unsubFlow();   _unsubFlow   = null; }
     if (_unsubPerms)  { _unsubPerms();  _unsubPerms  = null; }
     if (_unsubBackupMeta) { _unsubBackupMeta(); _unsubBackupMeta = null; }
@@ -4158,6 +5037,15 @@
       _saoList = snap.exists() ? (snap.data().list || []) : [];
       if (typeof renderSaoListUI === 'function') renderSaoListUI();
       if (typeof renderSaoDropdown === 'function') renderSaoDropdown();
+    });
+
+    // หัวข้อสต็อก (settings/stockTopics) — เรียลไทม์ทุกเครื่อง
+    _unsubStockTopics = onSnapshot(doc(db, 'settings', 'stockTopics'), snap => {
+      const list = snap.exists() ? (snap.data().list || []) : [];
+      if (typeof window._setStockTopics === 'function') window._setStockTopics(list);
+      // อัปเดต UI ถ้ากำลังเปิดหน้าที่เกี่ยวข้อง
+      if (typeof renderStockTopicsUI === 'function' && _currentView === 'settings') renderStockTopicsUI();
+      if (typeof window._renderStockCurrent === 'function' && _currentView === 'stock') window._renderStockCurrent();
     });
 
     // โหลดโน้ตเฉพาะช่วงเดือนที่กำลังดู (เดือนก่อน–เดือนนี้–เดือนถัดไป ให้ครอบช่องปฏิทินที่ล้นขอบ)
