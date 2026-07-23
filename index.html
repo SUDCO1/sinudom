@@ -971,15 +971,36 @@
           <div id="stockTopicList" style="min-height:60px;margin-top:16px;"></div>
         </div>
 
-        <!-- ===== ระดับ 2: รายการสเปคภายในหัวข้อ ===== -->
-        <div id="stockItemsSection" style="display:none;">
-          <!-- แถบนำทางกลับ + ชื่อหัวข้อ -->
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px;">
-            <button onclick="closeStockTopic()"
-              style="background:#eef2ff;color:#1a3a6b;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">← หัวข้อทั้งหมด</button>
-            <span style="color:#9ca3af;">/</span>
-            <span id="stockTopicTitle" style="font-size:15px;font-weight:700;color:#1a3a6b;"></span>
+        <!-- ===== แถบนำทาง (breadcrumb) — แสดงเมื่อเปิดหัวข้อ/หมวดหมู่ย่อย ===== -->
+        <div id="stockCrumbBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 10px;">
+          <button id="stockBackBtn" type="button"
+            style="background:#eef2ff;color:#1a3a6b;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">← หัวข้อทั้งหมด</button>
+          <span style="color:#9ca3af;">/</span>
+          <span id="stockCrumbTitle" style="font-size:15px;font-weight:700;color:#1a3a6b;"></span>
+        </div>
+
+        <!-- ===== หมวดหมู่ย่อยภายในหัวข้อ (แสดงเฉพาะหน้าหัวข้อ) ===== -->
+        <div id="stockSubListSection" style="display:none;">
+          <div style="font-size:13px;font-weight:700;color:#1a3a6b;margin:4px 0 8px;">📂 หมวดหมู่ย่อย</div>
+
+          <!-- ฟอร์มเพิ่มหมวดหมู่ย่อย (เฉพาะผู้มีสิทธิ์แก้ไข) -->
+          <div id="stockSubAddBar" style="display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:0 0 12px;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:200px;">
+              <label style="font-size:11px;color:#6b7280;">หมวดหมู่ย่อย</label>
+              <input id="newStockSubInput" type="text" placeholder="เช่น 20.00 ม." maxlength="60"
+                onkeydown="if(event.key==='Enter') addStockSub()"
+                style="padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+            </div>
+            <button onclick="addStockSub()"
+              style="background:#1a3a6b;color:white;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">➕ เพิ่มหมวดหมู่ย่อย</button>
           </div>
+
+          <div id="stockSubList" style="min-height:40px;"></div>
+        </div>
+
+        <!-- ===== รายการสเปค (คีย์ในหัวข้อโดยตรง หรือในหมวดหมู่ย่อย) ===== -->
+        <div id="stockItemsSection" style="display:none;">
+          <div id="stockSpecHeading" style="font-size:13px;font-weight:700;color:#1a3a6b;margin:16px 0 8px;">📋 รายการสเปค</div>
 
           <!-- ฟอร์มเพิ่มสเปค (เฉพาะผู้มีสิทธิ์แก้ไข) -->
           <div id="stockAddBar" style="display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:8px 0 14px;">
@@ -1539,11 +1560,13 @@
   window.renderLogView = renderLogView;
   window.renderLogList = renderLogList;
 
-  // ===== STOCK: สต็อกสินค้า (2 ระดับ: หัวข้อใหญ่ → สเปคภายใน) =====
+  // ===== STOCK: สต็อกสินค้า (3 ระดับ: หัวข้อใหญ่ → หมวดหมู่ย่อย → สเปคภายใน) =====
   let _stockData = [];
-  let _stockTopics = [];           // [{ id, name }] — จัดการที่หน้าตั้งค่า
+  let _stockTopics = [];           // [{ id, name, subs:[{id,name}] }] — จัดการที่หน้าตั้งค่า/หน้าสต็อก
   let _stockTopicSel = null;       // id ของหัวข้อที่กำลังเปิด, null = หน้ารายการหัวข้อ, '__none__' = กลุ่มไม่ระบุหัวข้อ
+  let _stockSubSel = null;         // id ของหมวดหมู่ย่อยที่กำลังเปิด, null = หน้ารายการหมวดหมู่ย่อย, '__nosub__' = กลุ่มไม่ระบุหมวดหมู่ย่อย
   const STOCK_NONE = '__none__';
+  const SUB_NONE = '__nosub__';
   function _stEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -1561,6 +1584,23 @@
   }
   function _hasOrphanStock() { return _stockData.some(it => !it.topic || !_stockTopicById(it.topic)); }
 
+  // ── หมวดหมู่ย่อย (subcategory) ภายในหัวข้อ ──
+  function _stockSubsOf(topicId) { const t = _stockTopicById(topicId); return (t && Array.isArray(t.subs)) ? t.subs : []; }
+  function _stockSubById(topicId, subId) { return _stockSubsOf(topicId).find(s => s.id === subId) || null; }
+  function _stockSubName(topicId, subId) {
+    if (subId === SUB_NONE) return 'ไม่ระบุหมวดหมู่ย่อย';
+    const s = _stockSubById(topicId, subId);
+    return s ? (s.name || '(ไม่มีชื่อ)') : '(ไม่มีชื่อ)';
+  }
+  // สินค้าในหมวดหมู่ย่อย subId ของหัวข้อ topicId (SUB_NONE = ยังไม่ระบุหมวดหมู่ย่อย หรือหมวดถูกลบ)
+  function _stockItemsInSub(topicId, subId) {
+    const inTopic = _stockItemsIn(topicId);
+    if (subId === SUB_NONE) return inTopic.filter(it => !it.sub || !_stockSubById(topicId, it.sub));
+    return inTopic.filter(it => it.sub === subId);
+  }
+  function _hasOrphanSub(topicId) { return _stockItemsIn(topicId).some(it => !it.sub || !_stockSubById(topicId, it.sub)); }
+  function _genSubId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
   function renderStockView() {
     // เริ่มติดตามข้อมูลสต็อกแบบเรียลไทม์ (ครั้งเดียว — callback จะวาดระดับที่กำลังเปิดอยู่)
     // ประวัติเก็บใน field history ของแต่ละเอกสารสต็อก จึงมากับ callback นี้แบบเรียลไทม์อยู่แล้ว
@@ -1570,32 +1610,71 @@
     _renderStockCurrent();
   }
 
-  // ตัดสินใจว่าจะแสดง "รายการหัวข้อ" หรือ "รายการสเปคในหัวข้อ"
+  // หมวดหมู่ย่อยที่ใช้กรอง/บันทึกตามหน้าที่เปิดอยู่
+  //  - หน้าหัวข้อ (ยังไม่เลือกหมวดย่อย): ใช้กับสเปคที่คีย์ตรงในหัวข้อ (sub ว่าง)
+  //  - หน้าหมวดหมู่ย่อย: ใช้กับหมวดที่เลือก
+  function _effSubFilter() { return (_stockSubSel == null) ? SUB_NONE : _stockSubSel; }
+  function _effSubStore()  { return (_stockSubSel == null) ? '' : _stockSubSel; }
+
+  // ตัดสินใจว่าจะแสดง "รายการหัวข้อ" / "หน้าหัวข้อ (หมวดย่อย+สเปคตรง)" / "หน้าหมวดหมู่ย่อย"
   function _renderStockCurrent() {
     // ถ้าหัวข้อที่เปิดอยู่ถูกลบไปแล้ว ให้ย้อนกลับหน้ารายการหัวข้อ
-    if (_stockTopicSel && _stockTopicSel !== STOCK_NONE && !_stockTopicById(_stockTopicSel)) _stockTopicSel = null;
-    if (_stockTopicSel === STOCK_NONE && !_hasOrphanStock()) _stockTopicSel = null;
+    if (_stockTopicSel && _stockTopicSel !== STOCK_NONE && !_stockTopicById(_stockTopicSel)) { _stockTopicSel = null; _stockSubSel = null; }
+    if (_stockTopicSel === STOCK_NONE && !_hasOrphanStock()) { _stockTopicSel = null; _stockSubSel = null; }
+    // ถ้าหมวดหมู่ย่อยที่เปิดอยู่ถูกลบไปแล้ว ให้ย้อนกลับหน้าหัวข้อ
+    if (_stockTopicSel && _stockSubSel && _stockSubSel !== SUB_NONE && !_stockSubById(_stockTopicSel, _stockSubSel)) _stockSubSel = null;
 
     const listSec  = document.getElementById('stockTopicListSection');
+    const crumbBar = document.getElementById('stockCrumbBar');
+    const subSec   = document.getElementById('stockSubListSection');
     const itemsSec = document.getElementById('stockItemsSection');
     const subtitle = document.getElementById('stockSubtitle');
+    const backBtn  = document.getElementById('stockBackBtn');
+    const crumbT   = document.getElementById('stockCrumbTitle');
+    const specHd   = document.getElementById('stockSpecHeading');
+    const addBar   = document.getElementById('stockAddBar');
+    const subAddBar = document.getElementById('stockSubAddBar');
+
     if (_stockTopicSel == null) {
+      // ── ระดับ 1: รายการหัวข้อใหญ่ ──
       if (listSec)  listSec.style.display  = '';
+      if (crumbBar) crumbBar.style.display = 'none';
+      if (subSec)   subSec.style.display   = 'none';
       if (itemsSec) itemsSec.style.display = 'none';
-      if (subtitle) subtitle.textContent = 'เลือกหัวข้อเพื่อดู/จัดการสเปคภายใน — อัปเดตแบบเรียลไทม์';
+      if (subtitle) subtitle.textContent = 'เลือกหัวข้อเพื่อดู/จัดการภายใน — อัปเดตแบบเรียลไทม์';
       renderStockTopicList();
-    } else {
-      if (listSec)  listSec.style.display  = 'none';
-      if (itemsSec) itemsSec.style.display = '';
-      const title = document.getElementById('stockTopicTitle');
-      if (title) title.textContent = _stockTopicName(_stockTopicSel);
-      if (subtitle) subtitle.textContent = 'จัดการสเปค รับเข้า–เบิกออก ภายในหัวข้อนี้';
-      // เพิ่มรายการได้เฉพาะหัวข้อจริง + มีสิทธิ์แก้ไข (กลุ่ม "ไม่ระบุหัวข้อ" เพิ่มไม่ได้)
-      const addBar = document.getElementById('stockAddBar');
-      if (addBar) addBar.style.display = (canEditStock() && _stockTopicSel !== STOCK_NONE) ? 'flex' : 'none';
-      renderStockList();
-      renderStockHistory();
+      return;
     }
+
+    // เปิดหัวข้ออยู่ → แสดง breadcrumb + ส่วนรายการสเปคเสมอ
+    if (listSec)  listSec.style.display  = 'none';
+    if (crumbBar) crumbBar.style.display = 'flex';
+    if (itemsSec) itemsSec.style.display = '';
+
+    const isOrphanTopic = (_stockTopicSel === STOCK_NONE);
+    const inSub = (_stockSubSel != null);   // อยู่ในหน้าหมวดหมู่ย่อย
+
+    if (!inSub) {
+      // ── หน้าหัวข้อ: มีทั้ง "เพิ่มหมวดหมู่ย่อย" และ "คีย์สเปคตรงในหัวข้อ" ──
+      if (subSec) subSec.style.display = isOrphanTopic ? 'none' : '';
+      if (backBtn) { backBtn.textContent = '← หัวข้อทั้งหมด'; backBtn.onclick = closeStockTopic; }
+      if (crumbT) crumbT.textContent = _stockTopicName(_stockTopicSel);
+      if (subtitle) subtitle.textContent = isOrphanTopic ? 'รายการที่ยังไม่ระบุหัวข้อ' : 'เพิ่มหมวดหมู่ย่อย หรือคีย์สเปคในหัวข้อนี้ได้เลย';
+      if (specHd) specHd.textContent = isOrphanTopic ? '📋 รายการสเปค' : '📋 รายการสเปค (ในหัวข้อนี้โดยตรง)';
+      if (addBar) addBar.style.display = (canEditStock() && !isOrphanTopic) ? 'flex' : 'none';
+      if (subAddBar) subAddBar.style.display = (canEditStock() && !isOrphanTopic) ? 'flex' : 'none';
+      renderStockSubList();
+    } else {
+      // ── หน้าหมวดหมู่ย่อย: เฉพาะสเปคของหมวดนี้ ──
+      if (subSec) subSec.style.display = 'none';
+      if (backBtn) { backBtn.textContent = '← ' + _stockTopicName(_stockTopicSel); backBtn.onclick = closeStockSub; }
+      if (crumbT) crumbT.textContent = _stockTopicName(_stockTopicSel) + '  ›  ' + _stockSubName(_stockTopicSel, _stockSubSel);
+      if (subtitle) subtitle.textContent = 'จัดการสเปค รับเข้า–เบิกออก ภายในหมวดหมู่ย่อยนี้';
+      if (specHd) specHd.textContent = '📋 รายการสเปค';
+      if (addBar) addBar.style.display = (canEditStock() && _stockSubSel !== SUB_NONE) ? 'flex' : 'none';
+    }
+    renderStockList();
+    renderStockHistory();
   }
 
   // ── ระดับ 1: การ์ดรายการหัวข้อใหญ่ ──
@@ -1634,12 +1713,72 @@
     el.innerHTML = html;
   }
 
-  function openStockTopic(id) { _stockTopicSel = id; _renderStockCurrent(); }
-  function closeStockTopic() {
-    _stockTopicSel = null;
+  function openStockTopic(id) {
+    _stockTopicSel = id;
+    _stockSubSel = null;
     const s = document.getElementById('stockSearch');
     if (s) s.value = '';
     _renderStockCurrent();
+  }
+  function closeStockTopic() {
+    _stockTopicSel = null;
+    _stockSubSel = null;
+    const s = document.getElementById('stockSearch');
+    if (s) s.value = '';
+    _renderStockCurrent();
+  }
+  function openStockSub(id) {
+    _stockSubSel = id;
+    const s = document.getElementById('stockSearch');
+    if (s) s.value = '';
+    _renderStockCurrent();
+  }
+  function closeStockSub() {
+    _stockSubSel = null;   // กลับไปหน้าหัวข้อ
+    const s = document.getElementById('stockSearch');
+    if (s) s.value = '';
+    _renderStockCurrent();
+  }
+
+  // ── การ์ดหมวดหมู่ย่อยภายในหัวข้อ (แสดงในหน้าหัวข้อ เหนือรายการสเปค) ──
+  function renderStockSubList() {
+    const el = document.getElementById('stockSubList');
+    if (!el) return;
+    if (_stockTopicSel == null || _stockTopicSel === STOCK_NONE) { el.innerHTML = ''; return; }
+    const subs = _stockSubsOf(_stockTopicSel).slice();
+    const canManage = canEditStock();
+    if (!subs.length) {
+      el.innerHTML = '<div style="color:#9ca3af;padding:6px 2px 10px;font-size:12.5px;">'
+        + (canManage ? 'ยังไม่มีหมวดหมู่ย่อย — เพิ่มด้านบน หรือคีย์สเปคตรงในหัวข้อได้เลย' : 'ยังไม่มีหมวดหมู่ย่อย')
+        + '</div>';
+      return;
+    }
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:4px;">';
+    const mk = (subId, name) => {
+      const items = _stockItemsInSub(_stockTopicSel, subId);
+      const lowN = items.filter(it => { const m = Number(it.min) || 0; return m > 0 && (Number(it.qty) || 0) <= m; }).length;
+      let c = '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;background:#f9fafb;transition:box-shadow .15s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
+      c += '<div onclick="openStockSub(\'' + _stEsc(subId) + '\')" style="cursor:pointer;">';
+      c += '<div style="display:flex;align-items:center;gap:8px;">'
+        + '<span style="font-size:20px;">🏷️</span>'
+        + '<span style="font-size:15px;font-weight:700;color:#1a3a6b;flex:1;word-break:break-word;">' + _stEsc(name) + '</span></div>';
+      c += '<div style="margin-top:8px;font-size:12px;color:#6b7280;">' + items.length + ' รายการ';
+      if (lowN > 0) c += ' · <span style="color:#b91c1c;font-weight:600;">⚠️ ใกล้หมด ' + lowN + '</span>';
+      c += '</div>';
+      c += '<div style="margin-top:6px;font-size:12px;color:#1a3a6b;font-weight:600;">เปิดดู →</div>';
+      c += '</div>';
+      if (canManage) {
+        c += '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;border-top:1px solid #eef0f4;padding-top:8px;">'
+          + '<button onclick="renameStockSub(\'' + _stEsc(subId) + '\')" title="แก้ชื่อ" style="background:none;border:none;color:#f59e0b;cursor:pointer;font-size:14px;padding:2px 6px;">✏️</button>'
+          + ((canDelStock() || isAdmin()) ? '<button onclick="deleteStockSub(\'' + _stEsc(subId) + '\')" title="ลบ" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>' : '')
+          + '</div>';
+      }
+      c += '</div>';
+      return c;
+    };
+    subs.forEach(s => { html += mk(s.id, s.name || '(ไม่มีชื่อ)'); });
+    html += '</div>';
+    el.innerHTML = html;
   }
 
   // ลำดับการแสดง: ใช้ field order (ถ้าไม่มีใช้ tsClient) เพื่อให้ขยับขึ้น-ลงได้
@@ -1653,7 +1792,7 @@
   // เลื่อนรายการขึ้น (dir=-1) หรือลง (dir=1) ภายในหัวข้อเดียวกัน
   async function moveStockItem(id, dir) {
     if (!canEditStock()) { alert(denyMsg()); return; }
-    let rows = _stockItemsIn(_stockTopicSel);
+    let rows = _stockItemsInSub(_stockTopicSel, _effSubFilter());
     rows.sort(_stockOrderCmp);
     const idx = rows.findIndex(r => r.id === id);
     const tgt = idx + dir;
@@ -1678,7 +1817,7 @@
     if (!el) return;
     if (_stockTopicSel == null) { el.innerHTML = ''; return; }
     const term = (document.getElementById('stockSearch')?.value || '').trim().toLowerCase();
-    let rows = _stockItemsIn(_stockTopicSel);
+    let rows = _stockItemsInSub(_stockTopicSel, _effSubFilter());
     rows.sort(_stockOrderCmp);
     if (term) rows = rows.filter(it =>
       String(it.spec || '').toLowerCase().includes(term)
@@ -1686,9 +1825,10 @@
 
     const canAddHere = canEditStock() && _stockTopicSel !== STOCK_NONE;
     if (!rows.length) {
-      const total = _stockItemsIn(_stockTopicSel).length;
+      const total = _stockItemsInSub(_stockTopicSel, _effSubFilter()).length;
+      const whereTxt = (_stockSubSel == null) ? 'ยังไม่มีสเปคในหัวข้อนี้' : 'ยังไม่มีรายการในหมวดหมู่ย่อยนี้';
       el.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:34px;font-size:13px;">'
-        + (total ? 'ไม่พบรายการที่ค้นหา' : 'ยังไม่มีรายการในหัวข้อนี้' + (canAddHere ? ' — เพิ่มรายการแรกได้ที่ด้านบน' : '')) + '</div>';
+        + (total ? 'ไม่พบรายการที่ค้นหา' : whereTxt + (canAddHere ? ' — เพิ่มรายการแรกได้ที่ด้านบน' : '')) + '</div>';
       return;
     }
 
@@ -1773,7 +1913,7 @@
   // จัดลำดับใหม่หลังลากวาง: ย้าย dragId ไปไว้ก่อน/หลัง targetId แล้วบันทึก order ทั้งชุด
   async function _reorderStockDrop(dragId, targetId, after) {
     if (!canEditStock()) { alert(denyMsg()); return; }
-    let rows = _stockItemsIn(_stockTopicSel);
+    let rows = _stockItemsInSub(_stockTopicSel, _effSubFilter());
     rows.sort(_stockOrderCmp);
     const from = rows.findIndex(r => r.id === dragId);
     if (from < 0) return;
@@ -1801,6 +1941,7 @@
     const qtyEl  = document.getElementById('stockQty');
     const spec = (specEl?.value || '').trim();
     if (!spec) { alert('กรุณากรอกสเปค / รายละเอียด'); specEl?.focus(); return; }
+    const subStore = _effSubStore();   // '' = คีย์ตรงในหัวข้อ, มิฉะนั้น = หมวดหมู่ย่อยที่เปิดอยู่
     const item = {
       name: spec,
       spec,
@@ -1808,11 +1949,13 @@
       qty: Math.max(0, Math.floor(Number(qtyEl?.value) || 0)),
       min: 0,
       note: '',
-      topic: _stockTopicSel
+      topic: _stockTopicSel,
+      sub: subStore
     };
+    const place = _stockTopicName(_stockTopicSel) + (subStore ? (' › ' + _stockSubName(_stockTopicSel, subStore)) : '');
     try {
       if (typeof window.fbAddStockItem === 'function') await window.fbAddStockItem(item);
-      logAction('stock.add', spec, 'เพิ่มรายการ: ' + spec + ' [' + _stockTopicName(_stockTopicSel) + '] (เริ่มต้น ' + item.qty + ')');
+      logAction('stock.add', spec, 'เพิ่มรายการ: ' + spec + ' [' + place + '] (เริ่มต้น ' + item.qty + ')');
       if (specEl) specEl.value = '';
       if (qtyEl)  qtyEl.value = '';
       specEl?.focus();
@@ -1996,8 +2139,8 @@
   function renderStockHistory() {
     const el = document.getElementById('stockHistoryList');
     if (!el) return;
-    if (_stockTopicSel == null) return;      // แสดงเฉพาะตอนเปิดหัวข้อ
-    const topicItems = _stockItemsIn(_stockTopicSel);
+    if (_stockTopicSel == null) return;   // แสดงเฉพาะตอนเปิดหัวข้อ/หมวดหมู่ย่อย
+    const topicItems = _stockItemsInSub(_stockTopicSel, _effSubFilter());
     const filt = (document.getElementById('stockHistFilter') || {}).value || 'all';
     // รวมประวัติจากทุกสเปคในหัวข้อ (เก็บใน field history ของแต่ละเอกสารสต็อก)
     let rows = [];
@@ -2132,12 +2275,64 @@
     renderStockTopicsUI();
   }
 
+  // ── หน้าสต็อก: จัดการหมวดหมู่ย่อย (เพิ่ม/แก้ชื่อ/ลบ) ภายในหัวข้อที่เปิดอยู่ ──
+  function addStockSub() {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    if (!_stockTopicSel || _stockTopicSel === STOCK_NONE) { alert('กรุณาเลือกหัวข้อก่อน'); return; }
+    const inp = document.getElementById('newStockSubInput');
+    const name = inp ? inp.value.trim() : '';
+    if (!name) return;
+    const subs = _stockSubsOf(_stockTopicSel);
+    if (subs.some(s => (s.name || '').toLowerCase() === name.toLowerCase())) { alert('มีหมวดหมู่ย่อยชื่อนี้อยู่แล้ว'); return; }
+    const newSub = { id: _genSubId(), name };
+    const list = _stockTopics.map(t => t.id === _stockTopicSel
+      ? { ...t, subs: [...(Array.isArray(t.subs) ? t.subs : []), newSub] } : t);
+    saveStockTopics(list);
+    logAction('stock.sub.add', name, 'เพิ่มหมวดหมู่ย่อย: ' + name + ' [' + _stockTopicName(_stockTopicSel) + ']');
+    if (inp) inp.value = '';
+    _renderStockCurrent();
+  }
+  function renameStockSub(subId) {
+    if (!canEditStock()) { alert(denyMsg()); return; }
+    const s = _stockSubById(_stockTopicSel, subId);
+    if (!s) return;
+    const name = prompt('ชื่อหมวดหมู่ย่อย:', s.name || '');
+    if (name === null) return;
+    const nm = name.trim();
+    if (!nm) { alert('ชื่อหมวดหมู่ย่อยห้ามว่าง'); return; }
+    if (_stockSubsOf(_stockTopicSel).some(x => x.id !== subId && (x.name || '').toLowerCase() === nm.toLowerCase())) { alert('มีหมวดหมู่ย่อยชื่อนี้อยู่แล้ว'); return; }
+    const list = _stockTopics.map(t => t.id === _stockTopicSel
+      ? { ...t, subs: (Array.isArray(t.subs) ? t.subs : []).map(x => x.id === subId ? { ...x, name: nm } : x) } : t);
+    saveStockTopics(list);
+    logAction('stock.sub.edit', nm, 'แก้ชื่อหมวดหมู่ย่อย: ' + (s.name || '') + ' → ' + nm);
+    _renderStockCurrent();
+  }
+  function deleteStockSub(subId) {
+    if (!(canDelStock() || isAdmin())) { alert(denyMsg()); return; }
+    const s = _stockSubById(_stockTopicSel, subId);
+    if (!s) return;
+    const cnt = _stockItemsInSub(_stockTopicSel, subId).length;
+    if (cnt > 0) { alert('หมวดหมู่ย่อยนี้ยังมี ' + cnt + ' รายการ\nกรุณาลบ/ย้ายรายการในหมวดหมู่ย่อยออกก่อน แล้วจึงลบ'); return; }
+    if (!confirm('ลบหมวดหมู่ย่อย "' + (s.name || '') + '" ?')) return;
+    const list = _stockTopics.map(t => t.id === _stockTopicSel
+      ? { ...t, subs: (Array.isArray(t.subs) ? t.subs : []).filter(x => x.id !== subId) } : t);
+    saveStockTopics(list);
+    logAction('stock.sub.del', s.name || '', 'ลบหมวดหมู่ย่อย: ' + (s.name || ''));
+    _renderStockCurrent();
+  }
+
   window.renderStockView = renderStockView;
   window.renderStockList = renderStockList;
   window.renderStockTopicList = renderStockTopicList;
+  window.renderStockSubList = renderStockSubList;
   window._renderStockCurrent = _renderStockCurrent;
   window.openStockTopic = openStockTopic;
   window.closeStockTopic = closeStockTopic;
+  window.openStockSub = openStockSub;
+  window.closeStockSub = closeStockSub;
+  window.addStockSub = addStockSub;
+  window.renameStockSub = renameStockSub;
+  window.deleteStockSub = deleteStockSub;
   window.addStockItem = addStockItem;
   window.editStockItem = editStockItem;
   window.stockIn = stockIn;
@@ -4850,6 +5045,7 @@
       min: Math.max(0, Math.floor(Number(item.min) || 0)),
       note: item.note || '',
       topic: item.topic || '',
+      sub: item.sub || '',
       order: Number(item.order) || Date.now(),
       createdAt: serverTimestamp(),
       tsClient: Date.now(),
@@ -4863,6 +5059,7 @@
     if ('unit'  in patch) body.unit  = patch.unit || '';
     if ('note'  in patch) body.note  = patch.note || '';
     if ('topic' in patch) body.topic = patch.topic || '';
+    if ('sub'   in patch) body.sub   = patch.sub || '';
     if ('min'   in patch) body.min   = Math.max(0, Math.floor(Number(patch.min) || 0));
     if ('qty'   in patch) body.qty   = Math.max(0, Math.floor(Number(patch.qty) || 0));
     if ('order' in patch) body.order = Number(patch.order) || 0;
